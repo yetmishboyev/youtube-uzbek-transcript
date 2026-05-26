@@ -478,4 +478,79 @@ document.addEventListener('keydown', e => {
   }
 });
 
-urlInput.focus();
+/* ============================================================
+   Auth & Landing
+   ============================================================ */
+let currentUser = null;
+
+async function initAuth() {
+  try {
+    const res = await fetch('/api/me');
+    const data = await res.json();
+
+    if (!data.loggedIn) {
+      document.getElementById('landingPage').style.display = 'block';
+      document.getElementById('appContainer').style.display = 'none';
+      document.getElementById('headerGuest').style.display = 'flex';
+      return;
+    }
+
+    currentUser = data;
+    document.getElementById('landingPage').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'block';
+    document.getElementById('headerGuest').style.display = 'none';
+    document.getElementById('headerUser').style.display = 'flex';
+
+    const avatar = document.getElementById('userAvatar');
+    if (data.picture) avatar.src = data.picture;
+
+    document.getElementById('userDropdownName').textContent = data.name || '';
+    document.getElementById('userDropdownEmail').textContent = data.email || '';
+    document.getElementById('userDropdownTier').textContent = data.isPremium ? '⚡ Premium' : 'Bepul tarif';
+
+    const upgradeBtn = document.getElementById('upgradeBtn');
+    if (data.isPremium) {
+      upgradeBtn.textContent = '⚡ Premium';
+      upgradeBtn.classList.add('premium-active');
+    }
+
+    const tierBanner = document.getElementById('tierBanner');
+    if (data.isPremium) {
+      tierBanner.textContent = '⚡ Premium: Claude AI tarjima faol';
+      tierBanner.style.borderColor = '#f59e0b';
+      tierBanner.style.color = '#f59e0b';
+    } else {
+      tierBanner.textContent = 'Bepul tarif: Google Translate ishlatilmoqda';
+    }
+
+    urlInput.focus();
+  } catch (e) {
+    console.error('Auth xato:', e);
+  }
+}
+
+document.getElementById('userAvatar').addEventListener('click', () => {
+  const dd = document.getElementById('userDropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+});
+
+document.addEventListener('click', e => {
+  const menu = document.getElementById('userMenu');
+  if (menu && !menu.contains(e.target))
+    document.getElementById('userDropdown').style.display = 'none';
+});
+
+document.getElementById('upgradeBtn').addEventListener('click', () => {
+  document.getElementById('upgradeModal').style.display = 'flex';
+});
+
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('upgradeModal').style.display = 'none';
+});
+
+document.getElementById('upgradeModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('upgradeModal'))
+    document.getElementById('upgradeModal').style.display = 'none';
+});
+
+initAuth();

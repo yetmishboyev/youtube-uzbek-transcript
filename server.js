@@ -7,6 +7,11 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
+const session = require('express-session');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const { Pool } = require('pg');
+const pgSession = require('connect-pg-simple')(session);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,10 +19,83 @@ const WHISPER_SCRIPT = path.join(__dirname, 'whisper_transcribe.py');
 const YTDLP_BIN   = '/Library/Frameworks/Python.framework/Versions/3.10/bin/yt-dlp';
 const PYTHON_BIN  = '/Library/Frameworks/Python.framework/Versions/3.10/bin/python3';
 
-// Anthropic client — faqat API key bo'lsa ishlatiladi
+// Anthropic client
 const anthropic = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your_api_key_here'
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
+
+// PostgreSQL pool
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+/* ─── Session + Passport ───────────────────────────────────────── */
+app.use(session({
+  store: new pgSession({ pool, tableName: 'sessions' }),
+  secret: process.env.SESSION_SECRET || 'fallback-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, // 30 kun
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser(async (id, done) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM users WHERE id=$1', [id]);
+    done(null, rows[0] || null);
+  } catch (e) { done(e); }
+});
+
+passport.use(new GoogleStrategy({
+  clientID:     process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL:  process.env.GOOGLE_CALLBACK_URL,
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    const email = profile.emails?.[0]?.value || '';
+    const picture = profile.photos?.[0]?.value || '';
+    const { rows } = await pool.query(
+      `INSERT INTO users (google_id, email, name, picture)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (google_id) DO UPDATE SET name=$3, picture=$4
+       RETURNING *`,
+      [profile.id, email, profile.displayName, picture]
+    );
+    done(null, rows[0]);
+  } catch (e) { done(e); }
+}));
+
+/* ─── Auth routes ──────────────────────────────────────────────── */
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/?error=auth' }),
+  (req, res) => res.redirect('/')
+);
+
+app.get('/auth/logout', (req, res) => {
+  req.logout(() => res.redirect('/'));
+});
+
+app.get('/api/me', (req, res) => {
+  if (!req.user) return res.json({ loggedIn: false });
+  res.json({
+    loggedIn: true,
+    name: req.user.name,
+    email: req.user.email,
+    picture: req.user.picture,
+    isPremium: req.user.is_premium,
+  });
+});
+
+// Upgrade placeholder (to'lov tizimi keyinroq qo'shiladi)
+app.post('/api/upgrade', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Login kerak' });
+  res.json({ status: 'coming_soon', message: "To'lov tizimi tez kunda qo'shiladi!" });
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
@@ -117,15 +195,18 @@ async function translateGoogle(text, sourceLang = 'auto', retries = 2) {
   return text;
 }
 
-/* ─── Asosiy batch tarjima (Claude → Google fallback) ─────────── */
+/* ─── Batch tarjima funksiyalari ───────────────────────────────── */
 const BATCH = 20;
 
+// Premium: Claude Haiku
 async function translateBatch(texts, sourceLang = 'auto') {
-  // 1. Claude bilan sinab ko'r
   const claudeResult = await translateWithClaude(texts, sourceLang);
   if (claudeResult) return claudeResult;
+  return translateBatchGoogle(texts, sourceLang);
+}
 
-  // 2. Google Translate fallback (bitta matn sifatida)
+// Bepul: Google Translate
+async function translateBatchGoogle(texts, sourceLang = 'auto') {
   const SEP = '\n||||\n';
   const joined = texts.join(SEP).substring(0, 4800);
   const translated = await translateGoogle(joined, sourceLang);
@@ -133,7 +214,6 @@ async function translateBatch(texts, sourceLang = 'auto') {
 
   if (parts.length === texts.length) return parts.map(p => p.trim());
 
-  // 3. Har biri alohida tarjima
   const results = [];
   for (const t of texts) {
     results.push(await translateGoogle(t, sourceLang));
@@ -216,7 +296,7 @@ function setupSSE(res) {
 }
 
 /* ─── Segmentlarni tarjima qilib stream qilish ─────────────────── */
-async function translateAndStream(transcript, lang, send, needsTranslation, isCancelled = () => false) {
+async function translateAndStream(transcript, lang, send, needsTranslation, isCancelled = () => false, usePremium = false) {
   const total = transcript.length;
 
   if (!needsTranslation) {
@@ -229,7 +309,8 @@ async function translateAndStream(transcript, lang, send, needsTranslation, isCa
     return;
   }
 
-  const engine = anthropic ? 'Claude Haiku' : 'Google Translate';
+  const useAI = usePremium && anthropic;
+  const engine = useAI ? 'Claude Haiku' : 'Google Translate';
   send({ type: 'engine', engine });
 
   for (let i = 0; i < total; i += BATCH) {
@@ -237,7 +318,9 @@ async function translateAndStream(transcript, lang, send, needsTranslation, isCa
     const batch = transcript.slice(i, Math.min(i + BATCH, total));
     const texts = batch.map(item => decodeEntities(item.text));
 
-    const translated = await translateBatch(texts, lang === 'auto' ? 'en' : lang);
+    const translated = useAI
+      ? await translateBatch(texts, lang === 'auto' ? 'en' : lang)
+      : await translateBatchGoogle(texts, lang === 'auto' ? 'en' : lang);
 
     if (isCancelled()) return;
     batch.forEach((item, j) => {
@@ -250,7 +333,7 @@ async function translateAndStream(transcript, lang, send, needsTranslation, isCa
     });
 
     send({ type: 'progress', done: Math.min(i + BATCH, total), total });
-    if (i + BATCH < total) await sleep(anthropic ? 200 : 280);
+    if (i + BATCH < total) await sleep(useAI ? 200 : 280);
   }
 }
 
@@ -266,6 +349,7 @@ app.get('/api/transcript', async (req, res) => {
   let cancelled = false;
   req.on('close', () => { cancelled = true; });
   const isCancelled = () => cancelled;
+  const usePremium = req.user?.is_premium === true;
 
   try {
     /* ── 1. YouTube subtitri ── */
@@ -279,7 +363,7 @@ app.get('/api/transcript', async (req, res) => {
       const needsTranslation = lang !== 'uz';
       send({ type: 'start', total: transcript.length, needsTranslation, videoId,
         source: 'captions', lang });
-      await translateAndStream(transcript, lang, send, needsTranslation, isCancelled);
+      await translateAndStream(transcript, lang, send, needsTranslation, isCancelled, usePremium);
       if (!isCancelled()) send({ type: 'done' });
       return finish();
     }
@@ -332,7 +416,7 @@ app.get('/api/transcript', async (req, res) => {
 
     // Whisper segmentlarini transcript formatiga o'tkazish
     const asTranscript = segs.map(s => ({ text: s.text, offset: s.offset, duration: s.duration }));
-    await translateAndStream(asTranscript, detectedLang, send, needsTranslation, isCancelled);
+    await translateAndStream(asTranscript, detectedLang, send, needsTranslation, isCancelled, usePremium);
     if (!isCancelled()) send({ type: 'done' });
     finish();
 
