@@ -318,7 +318,7 @@ html, body {
   display: inline;
   background: none;
   color: #ffffff;
-  font-size: clamp(15px, 1.8vw, 22px);
+  font-size: clamp(20px, 2.6vw, 32px);
   font-weight: 700;
   line-height: 1.7;
   padding: 0;
