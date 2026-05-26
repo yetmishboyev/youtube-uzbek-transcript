@@ -91,7 +91,157 @@ app.post('/api/upgrade', (req, res) => {
   res.json({ status: 'coming_soon', message: "To'lov tizimi tez kunda qo'shiladi!" });
 });
 
+// last_seen yangilash
+app.use((req, res, next) => {
+  if (req.user) {
+    pool.query('UPDATE users SET last_seen=NOW() WHERE id=$1', [req.user.id]).catch(() => {});
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+/* ================================================================
+   ADMIN PANEL
+   ================================================================ */
+
+function requireAdmin(req, res, next) {
+  if (req.session.isAdmin) return next();
+  res.status(401).json({ error: 'Admin login kerak' });
+}
+
+// Admin login
+app.post('/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.ADMIN_PASSWORD) {
+    req.session.isAdmin = true;
+    return res.json({ ok: true });
+  }
+  res.status(401).json({ error: "Noto'g'ri parol" });
+});
+
+app.post('/admin/logout', (req, res) => {
+  req.session.isAdmin = false;
+  res.json({ ok: true });
+});
+
+// Admin panel HTML
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin', 'index.html'));
+});
+
+// Dashboard stats
+app.get('/admin/api/stats', requireAdmin, async (req, res) => {
+  try {
+    const [total, premium, today, week, active7d] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM users'),
+      pool.query('SELECT COUNT(*) FROM users WHERE is_premium=true'),
+      pool.query("SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 day'"),
+      pool.query("SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '7 days'"),
+      pool.query("SELECT COUNT(*) FROM users WHERE last_seen >= NOW() - INTERVAL '7 days'"),
+    ]);
+    res.json({
+      total: parseInt(total.rows[0].count),
+      premium: parseInt(premium.rows[0].count),
+      free: parseInt(total.rows[0].count) - parseInt(premium.rows[0].count),
+      newToday: parseInt(today.rows[0].count),
+      newWeek: parseInt(week.rows[0].count),
+      active7d: parseInt(active7d.rows[0].count),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Users list
+app.get('/admin/api/users', requireAdmin, async (req, res) => {
+  try {
+    const { search = '', filter = 'all', sort = 'newest', page = 1 } = req.query;
+    const limit = 20;
+    const offset = (parseInt(page) - 1) * limit;
+
+    let where = [];
+    let params = [];
+
+    if (search) {
+      params.push(`%${search.toLowerCase()}%`);
+      where.push(`(LOWER(email) LIKE $${params.length} OR LOWER(name) LIKE $${params.length})`);
+    }
+    if (filter === 'premium') where.push('is_premium=true');
+    if (filter === 'free') where.push('is_premium=false');
+
+    const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
+    const orderMap = { newest: 'created_at DESC', oldest: 'created_at ASC', active: 'last_seen DESC NULLS LAST', email: 'email ASC' };
+    const orderClause = orderMap[sort] || 'created_at DESC';
+
+    params.push(limit, offset);
+    const { rows } = await pool.query(
+      `SELECT id, email, name, is_premium, created_at, last_seen, total_videos
+       FROM users ${whereClause}
+       ORDER BY ${orderClause}
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+
+    const countParams = params.slice(0, -2);
+    const { rows: countRows } = await pool.query(
+      `SELECT COUNT(*) FROM users ${whereClause}`, countParams
+    );
+
+    res.json({ users: rows, total: parseInt(countRows[0].count), page: parseInt(page), limit });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Premium toggle
+app.patch('/admin/api/users/:id/premium', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'UPDATE users SET is_premium = NOT is_premium WHERE id=$1 RETURNING id, email, is_premium',
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
+    await pool.query(
+      'INSERT INTO admin_log (admin_action, target_user_id, target_email, details) VALUES ($1,$2,$3,$4)',
+      ['toggle_premium', rows[0].id, rows[0].email, rows[0].is_premium ? 'premium berildi' : 'premium olib tashlandi']
+    );
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Delete user
+app.delete('/admin/api/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query('DELETE FROM users WHERE id=$1 RETURNING email', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
+    await pool.query(
+      'INSERT INTO admin_log (admin_action, target_email, details) VALUES ($1,$2,$3)',
+      ['delete_user', rows[0].email, "foydalanuvchi o'chirildi"]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin log
+app.get('/admin/api/log', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM admin_log ORDER BY created_at DESC LIMIT 50'
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// System status
+app.get('/admin/api/system', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({
+      db: 'ok',
+      claude: anthropic ? 'ok' : 'no_key',
+      uptime: Math.floor(process.uptime()),
+      nodeVersion: process.version,
+      memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+    });
+  } catch (e) { res.json({ db: 'error', error: e.message }); }
+});
 
 /* ─── URL parsing ──────────────────────────────────────────────── */
 function extractVideoId(url) {
