@@ -301,7 +301,7 @@ html, body {
 
 .subtitle-overlay {
   position: absolute;
-  bottom: 8%;
+  bottom: 13%;
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
