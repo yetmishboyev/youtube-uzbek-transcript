@@ -29,7 +29,7 @@
         <div id="headerUser" style="display:none" class="header-user-area">
           <button class="btn-upgrade" id="upgradeBtn">⚡ Premium</button>
           <div class="user-menu" id="userMenu">
-            <img id="userAvatar" class="user-avatar" src="" alt="avatar" />
+            <div id="userAvatar" class="user-avatar" role="button" tabindex="0"></div>
             <div class="user-dropdown" id="userDropdown" style="display:none">
               <div class="user-dropdown-name" id="userDropdownName"></div>
               <div class="user-dropdown-email" id="userDropdownEmail"></div>
@@ -105,7 +105,7 @@
       </div>
 
       <div class="email-login-form" id="emailLoginForm">
-        <input type="email" id="emailInput" class="email-input" placeholder="email@gmail.com" />
+        <input type="email" id="emailInput" class="email-input" placeholder="email@gmail.com" autocomplete="email" />
         <button class="btn-email-login" id="emailLoginBtn">Kirish</button>
         <div class="email-login-error" id="emailLoginError"></div>
       </div>

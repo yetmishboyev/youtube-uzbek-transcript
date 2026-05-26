@@ -4,6 +4,7 @@
 
 // State
 let player = null;
+let playerReady = false;
 let ytApiReady = false;
 let segments = [];
 let currentActiveIndex = -1;
@@ -14,35 +15,42 @@ let lastUrl = '';
 let videoId = null;
 let isLoading = false;
 let currentEvtSource = null;
+let currentUser = null;
 
 // DOM refs
-const urlInput    = document.getElementById('urlInput');
-const loadBtn     = document.getElementById('loadBtn');
-const clearBtn    = document.getElementById('clearBtn');
-const welcome     = document.getElementById('welcome');
-const workspace   = document.getElementById('workspace');
-const segmentsEl  = document.getElementById('segments');
-const loadingBar  = document.getElementById('loadingBar');
-const loadingFill = document.getElementById('loadingFill');
+const urlInput      = document.getElementById('urlInput');
+const loadBtn       = document.getElementById('loadBtn');
+const clearBtn      = document.getElementById('clearBtn');
+const welcome       = document.getElementById('welcome');
+const workspace     = document.getElementById('workspace');
+const segmentsEl    = document.getElementById('segments');
+const loadingBar    = document.getElementById('loadingBar');
+const loadingFill   = document.getElementById('loadingFill');
 const loadingStatus = document.getElementById('loadingStatus');
 const whisperBadge  = document.getElementById('whisperBadge');
 const sourceBadge   = document.getElementById('sourceBadge');
-const errorState  = document.getElementById('errorState');
-const errorMsg    = document.getElementById('errorMsg');
-const retryBtn    = document.getElementById('retryBtn');
+const errorState    = document.getElementById('errorState');
+const errorMsg      = document.getElementById('errorMsg');
+const retryBtn      = document.getElementById('retryBtn');
 const toggleLangBtn = document.getElementById('toggleLang');
-const copyBtn     = document.getElementById('copyBtn');
-const downloadBtn = document.getElementById('downloadBtn');
+const copyBtn       = document.getElementById('copyBtn');
+const downloadBtn   = document.getElementById('downloadBtn');
 const searchToggle  = document.getElementById('searchToggle');
-const searchBar   = document.getElementById('searchBar');
-const searchInput = document.getElementById('searchInput');
-const searchCount = document.getElementById('searchCount');
+const searchBar     = document.getElementById('searchBar');
+const searchInput   = document.getElementById('searchInput');
+const searchCount   = document.getElementById('searchCount');
 const segmentCount  = document.getElementById('segmentCount');
-const videoTitle  = document.getElementById('videoTitle');
+const videoTitle    = document.getElementById('videoTitle');
 const currentTimeEl = document.getElementById('currentTime');
 const totalTimeEl   = document.getElementById('totalTime');
-const muteBtn          = document.getElementById('muteBtn');
-const subtitleOverlay  = document.getElementById('subtitleOverlay');
+const muteBtn       = document.getElementById('muteBtn');
+const subtitleOverlay = document.getElementById('subtitleOverlay');
+// Persistent span inside overlay — avoids repeated DOM creation
+const subtitleSpan = (() => {
+  const s = document.createElement('span');
+  subtitleOverlay.appendChild(s);
+  return s;
+})();
 
 /* ============================================================
    YouTube IFrame API
@@ -50,7 +58,7 @@ const subtitleOverlay  = document.getElementById('subtitleOverlay');
 window.onYouTubeIframeAPIReady = function () { ytApiReady = true; };
 
 function createPlayer(vid) {
-  if (player) { player.loadVideoById(vid); return; }
+  if (player) { playerReady = false; player.loadVideoById(vid); return; }
   player = new YT.Player('ytPlayer', {
     videoId: vid,
     playerVars: { autoplay: 0, modestbranding: 1, rel: 0, cc_load_policy: 0 },
@@ -59,12 +67,22 @@ function createPlayer(vid) {
 }
 
 function onPlayerReady(e) {
+  playerReady = true;
   totalTimeEl.textContent = formatTime(e.target.getDuration());
   startSyncLoop();
 }
 
 function onPlayerStateChange(e) {
-  if (e.data === YT.PlayerState.PLAYING) startSyncLoop();
+  if (e.data === YT.PlayerState.PLAYING) {
+    startSyncLoop();
+  } else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
+    // Keep interval alive for time display, just don't waste CPU on fast ticks
+    // (interval is lightweight, but stop overlay on ended)
+    if (e.data === YT.PlayerState.ENDED) {
+      subtitleSpan.textContent = '';
+      subtitleOverlay.classList.remove('visible');
+    }
+  }
 }
 
 function startSyncLoop() {
@@ -76,7 +94,7 @@ function startSyncLoop() {
    Video — Transcript Sync
    ============================================================ */
 function syncTranscript() {
-  if (!player || typeof player.getCurrentTime !== 'function') return;
+  if (!playerReady || !player || typeof player.getCurrentTime !== 'function') return;
   const cur = player.getCurrentTime();
   currentTimeEl.textContent = formatTime(cur);
   if (!segments.length) return;
@@ -93,25 +111,37 @@ function syncTranscript() {
     if (prev) prev.classList.remove('active');
     if (newIdx >= 0) {
       const next = document.querySelector(`.segment[data-index="${newIdx}"]`);
-      if (next) { next.classList.add('active'); next.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      if (next) {
+        next.classList.add('active');
+        // Only scroll if not visible
+        const rect = next.getBoundingClientRect();
+        const panelRect = segmentsEl.getBoundingClientRect();
+        const isVisible = rect.top >= panelRect.top && rect.bottom <= panelRect.bottom;
+        if (!isVisible) next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
     currentActiveIndex = newIdx;
   }
 
   // Overlay: strict time range — show only while start <= cur < end
-  let overlayText = '';
   if (newIdx >= 0) {
     const seg = segments[newIdx];
     const start = seg.offset / 1000;
     const end   = start + seg.duration / 1000;
-    if (cur >= start && cur < end) overlayText = seg.translatedText;
-  }
-  const current = subtitleOverlay.firstChild;
-  if (overlayText) {
-    if (!current || current.textContent !== overlayText)
-      subtitleOverlay.innerHTML = `<span>${escHtml(overlayText)}</span>`;
-  } else if (subtitleOverlay.innerHTML) {
-    subtitleOverlay.innerHTML = '';
+    if (cur >= start && cur < end) {
+      if (subtitleSpan.textContent !== seg.translatedText) {
+        subtitleSpan.textContent = seg.translatedText;
+        subtitleOverlay.classList.add('visible');
+      }
+    } else {
+      if (subtitleSpan.textContent) {
+        subtitleSpan.textContent = '';
+        subtitleOverlay.classList.remove('visible');
+      }
+    }
+  } else {
+    subtitleSpan.textContent = '';
+    subtitleOverlay.classList.remove('visible');
   }
 }
 
@@ -122,12 +152,11 @@ async function load() {
   const url = urlInput.value.trim();
   if (!url) return;
 
-  // Oldingi stream bo'lsa to'xtat
   if (currentEvtSource) { currentEvtSource.close(); currentEvtSource = null; }
   isLoading = false;
 
   const vid = extractVideoId(url);
-  if (!vid) { showToast("⚠️ Noto'g'ri YouTube URL formati"); urlInput.focus(); return; }
+  if (!vid) { showToast("Noto'g'ri YouTube URL formati"); urlInput.focus(); return; }
 
   isLoading = true;
   videoId = vid;
@@ -139,10 +168,15 @@ async function load() {
   showWorkspace();
   resetTranscriptPanel();
 
-  // Load YouTube player
-  if (ytApiReady) createPlayer(vid);
-  else {
-    const wait = setInterval(() => { if (ytApiReady) { clearInterval(wait); createPlayer(vid); } }, 100);
+  if (ytApiReady) {
+    createPlayer(vid);
+  } else {
+    let attempts = 0;
+    const wait = setInterval(() => {
+      attempts++;
+      if (ytApiReady) { clearInterval(wait); createPlayer(vid); }
+      else if (attempts > 80) clearInterval(wait); // 8 soniya kutib to'xtatamiz
+    }, 100);
   }
 
   fetchVideoInfo(url);
@@ -163,10 +197,17 @@ function extractVideoId(url) {
 
 async function fetchVideoInfo(url) {
   try {
-    const r = await fetch(`/api/video-info?url=${encodeURIComponent(url)}`);
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(`/api/video-info?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
     const d = await r.json();
-    if (d.title) { videoTitle.textContent = d.title; document.title = `${d.title} — O'zbek Transkript`; }
-  } catch { videoTitle.textContent = 'YouTube Video'; }
+    if (d.title) {
+      videoTitle.textContent = d.title;
+      document.title = `${d.title} — O'zbek Transkript`;
+    }
+  } catch {
+    videoTitle.textContent = 'YouTube Video';
+  }
 }
 
 function streamTranscript(url) {
@@ -188,35 +229,44 @@ function streamTranscript(url) {
     }
 
     if (msg.type === 'engine') {
+      const isPremiumEngine = msg.engine === 'Claude Haiku';
       loadingStatus.textContent = `${msg.engine} bilan tarjima qilinmoqda...`;
+      if (isPremiumEngine) loadingFill.style.background = 'linear-gradient(90deg, #f59e0b, #ef4444)';
     }
 
     if (msg.type === 'start') {
       total = msg.total;
       segmentCount.textContent = `0 / ${total}`;
 
-      // Source badge
-      const sourceLabel = msg.source === 'whisper'
-        ? `🤖 Whisper AI transkriptsiya`
-        : `📝 YouTube subtitrlar`;
+      const sourceLabel = msg.source === 'whisper' ? '🤖 Whisper AI' : '📝 YouTube subtitrlar';
       const langLabel = msg.lang && msg.lang !== 'uz' && msg.lang !== 'auto'
-        ? msg.lang.toUpperCase()
-        : '';
-      sourceBadge.innerHTML = `<span>${sourceLabel}</span>${langLabel ? `<span class="lang-tag">${langLabel} → O'zbekcha</span>` : ''}`;
-      sourceBadge.style.display = 'flex';
-
-      if (msg.needsTranslation) {
-        loadingStatus.textContent = `Tarjima qilinmoqda (${total} segment)...`;
-      } else {
-        loadingStatus.textContent = `O'zbek subtitrlar yuklanmoqda (${total} segment)...`;
+        ? msg.lang.toUpperCase() : '';
+      sourceBadge.textContent = '';
+      const labelEl = document.createElement('span');
+      labelEl.textContent = sourceLabel;
+      sourceBadge.appendChild(labelEl);
+      if (langLabel) {
+        const tagEl = document.createElement('span');
+        tagEl.className = 'lang-tag';
+        tagEl.textContent = `${langLabel} → O'zbekcha`;
+        sourceBadge.appendChild(tagEl);
       }
+      sourceBadge.style.display = 'flex';
+      loadingStatus.textContent = msg.needsTranslation
+        ? `Tarjima qilinmoqda (${total} segment)...`
+        : `O'zbek subtitrlar yuklanmoqda (${total} segment)...`;
       addSkeletons(Math.min(total, 8));
     }
 
     if (msg.type === 'segment') {
       removeFirstSkeleton();
-      const seg = { index: msg.index, offset: msg.offset, duration: msg.duration,
-        originalText: msg.originalText, translatedText: msg.translatedText };
+      const seg = {
+        index: msg.index,
+        offset: Math.max(0, msg.offset || 0),
+        duration: Math.max(0, msg.duration || 0),
+        originalText: msg.originalText || '',
+        translatedText: msg.translatedText || '',
+      };
       segments[msg.index] = seg;
       loaded++;
       appendSegment(seg);
@@ -224,7 +274,8 @@ function streamTranscript(url) {
     }
 
     if (msg.type === 'progress') {
-      loadingFill.style.width = `${(msg.done / msg.total) * 100}%`;
+      const pct = total > 0 ? (msg.done / msg.total) * 100 : 0;
+      loadingFill.style.width = `${pct}%`;
       loadingStatus.textContent = `Tarjima: ${msg.done} / ${msg.total} segment...`;
     }
 
@@ -236,7 +287,7 @@ function streamTranscript(url) {
       loadingBar.style.display = 'none';
       const realCount = segments.filter(Boolean).length;
       segmentCount.textContent = `${realCount} segment`;
-      showToast('✅ Transkript tayyor!');
+      showToast('Transkript tayyor!');
     }
 
     if (msg.type === 'error') {
@@ -261,6 +312,12 @@ function streamTranscript(url) {
   };
 }
 
+// Sahifa yopilganda stream tozala
+window.addEventListener('beforeunload', () => {
+  if (currentEvtSource) { currentEvtSource.close(); }
+  if (syncInterval) clearInterval(syncInterval);
+});
+
 /* ============================================================
    DOM Helpers
    ============================================================ */
@@ -271,11 +328,24 @@ function appendSegment(seg) {
   div.dataset.translated = (seg.translatedText || '').toLowerCase();
   div.dataset.original   = (seg.originalText || '').toLowerCase();
 
-  div.innerHTML = `
-    <div class="segment-time"><span class="time-tag">${formatTime(seg.offset / 1000)}</span></div>
-    <div class="segment-text">${escHtml(seg.translatedText)}</div>
-    <div class="segment-original">${escHtml(seg.originalText)}</div>
-  `;
+  const timeDiv = document.createElement('div');
+  timeDiv.className = 'segment-time';
+  const timeTag = document.createElement('span');
+  timeTag.className = 'time-tag';
+  timeTag.textContent = formatTime(seg.offset / 1000);
+  timeDiv.appendChild(timeTag);
+
+  const textDiv = document.createElement('div');
+  textDiv.className = 'segment-text';
+  textDiv.textContent = seg.translatedText;
+
+  const origDiv = document.createElement('div');
+  origDiv.className = 'segment-original';
+  origDiv.textContent = seg.originalText;
+
+  div.appendChild(timeDiv);
+  div.appendChild(textDiv);
+  div.appendChild(origDiv);
 
   div.addEventListener('click', () => {
     if (player && typeof player.seekTo === 'function') {
@@ -293,10 +363,13 @@ function addSkeletons(n) {
   for (let i = 0; i < n; i++) {
     const div = document.createElement('div');
     div.className = 'skeleton';
-    div.innerHTML = `
-      <div class="skeleton-line skeleton-time"></div>
-      <div class="skeleton-line skeleton-text" style="width:${70 + Math.random() * 25}%"></div>
-    `;
+    const t = document.createElement('div');
+    t.className = 'skeleton-line skeleton-time';
+    const tx = document.createElement('div');
+    tx.className = 'skeleton-line skeleton-text';
+    tx.style.width = `${70 + Math.random() * 25}%`;
+    div.appendChild(t);
+    div.appendChild(tx);
     segmentsEl.appendChild(div);
   }
 }
@@ -308,9 +381,11 @@ function removeFirstSkeleton() {
 
 function resetTranscriptPanel() {
   segmentsEl.innerHTML = '';
-  subtitleOverlay.innerHTML = '';
+  subtitleSpan.textContent = '';
+  subtitleOverlay.classList.remove('visible');
   errorState.style.display = 'none';
   sourceBadge.style.display = 'none';
+  sourceBadge.textContent = '';
   whisperBadge.style.display = 'none';
   loadingBar.style.display = 'block';
   loadingFill.style.width = '0%';
@@ -319,6 +394,8 @@ function resetTranscriptPanel() {
   segmentCount.textContent = '—';
   currentTimeEl.textContent = '0:00';
   totalTimeEl.textContent = '0:00';
+  videoTitle.textContent = 'Video yuklanmoqda...';
+  document.title = "YouTube O'zbek Transkript";
 }
 
 function showWorkspace() {
@@ -328,6 +405,7 @@ function showWorkspace() {
 
 function setLoadingState(loading) {
   loadBtn.classList.toggle('loading', loading);
+  loadBtn.disabled = loading;
   loadBtn.querySelector('.btn-text').textContent = loading ? 'Yuklanmoqda...' : 'Yuklash';
 }
 
@@ -341,7 +419,8 @@ function showError(msg) {
    Search
    ============================================================ */
 function applySearch(query) {
-  searchQuery = query.toLowerCase().trim();
+  // Max 100 ta belgi — ReDoS himoyasi
+  searchQuery = query.toLowerCase().trim().slice(0, 100);
   let matchCount = 0;
   segmentsEl.querySelectorAll('.segment').forEach(el => {
     const idx = el.dataset.index;
@@ -349,8 +428,8 @@ function applySearch(query) {
     if (!seg) return;
     if (!searchQuery) {
       el.classList.remove('hidden');
-      el.querySelector('.segment-text').innerHTML = escHtml(seg.translatedText);
-      el.querySelector('.segment-original').innerHTML = escHtml(seg.originalText);
+      el.querySelector('.segment-text').textContent = seg.translatedText;
+      el.querySelector('.segment-original').textContent = seg.originalText;
     } else {
       const hit = el.dataset.translated.includes(searchQuery) || el.dataset.original.includes(searchQuery);
       el.classList.toggle('hidden', !hit);
@@ -370,7 +449,7 @@ function applySearchToElement(el, query) {
 
 function highlightText(text, query) {
   if (!query) return text;
-  return text.replace(new RegExp(`(${escRegex(query)})`, 'gi'), '<span class="highlight">$1</span>');
+  return text.replace(new RegExp(`(${escRegex(query)})`, 'gi'), '<mark class="highlight">$1</mark>');
 }
 
 /* ============================================================
@@ -378,7 +457,7 @@ function highlightText(text, query) {
    ============================================================ */
 function buildTranscriptText() {
   return segments.filter(Boolean)
-    .map(s => `[${formatTime(s.offset / 1000)}] ${s.translatedText}`)
+    .map(s => `[${formatTime((s.offset || 0) / 1000)}] ${s.translatedText || ''}`)
     .join('\n');
 }
 
@@ -387,19 +466,22 @@ function downloadTranscript() {
   if (!text) { showToast("Hali transkript yo'q"); return; }
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  a.href = url;
   a.download = `transkript-${videoId || 'video'}.txt`;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a.href);
-  showToast('📥 Transkript yuklab olindi');
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('Transkript yuklab olindi');
 }
 
 function copyTranscript() {
   const text = buildTranscriptText();
   if (!text) { showToast("Hali transkript yo'q"); return; }
   navigator.clipboard.writeText(text)
-    .then(() => showToast('📋 Transkript nusxalandi'))
-    .catch(() => showToast('⚠️ Nusxalash amalga oshmadi'));
+    .then(() => showToast('Transkript nusxalandi'))
+    .catch(() => showToast('Nusxalash amalga oshmadi'));
 }
 
 /* ============================================================
@@ -418,7 +500,7 @@ function showToast(msg) {
    Utils
    ============================================================ */
 function formatTime(sec) {
-  if (!sec || isNaN(sec)) return '0:00';
+  if (!sec || isNaN(sec) || sec < 0) return '0:00';
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = Math.floor(sec % 60);
@@ -466,13 +548,20 @@ retryBtn.addEventListener('click', () => {
 
 muteBtn.addEventListener('click', () => {
   if (!player) return;
-  if (player.isMuted()) { player.unMute(); muteBtn.style.opacity = '1'; }
-  else { player.mute(); muteBtn.style.opacity = '0.4'; }
+  if (player.isMuted()) {
+    player.unMute();
+    muteBtn.title = 'Ovozni o\'chirish';
+    muteBtn.style.opacity = '1';
+  } else {
+    player.mute();
+    muteBtn.title = 'Ovozni yoqish';
+    muteBtn.style.opacity = '0.4';
+  }
 });
 
 document.addEventListener('keydown', e => {
   if (e.target === urlInput || e.target === searchInput) return;
-  if (e.code === 'Space' && player) {
+  if (e.code === 'Space' && player && playerReady) {
     e.preventDefault();
     player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo();
   }
@@ -481,11 +570,11 @@ document.addEventListener('keydown', e => {
 /* ============================================================
    Auth & Landing
    ============================================================ */
-let currentUser = null;
-
 async function initAuth() {
   try {
-    const res = await fetch('/api/me');
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch('/api/me', { signal: ctrl.signal });
     const data = await res.json();
 
     if (!data.loggedIn) {
@@ -494,10 +583,11 @@ async function initAuth() {
       document.getElementById('headerGuest').style.display = 'flex';
       return;
     }
-
     showApp(data);
-  } catch (e) {
-    console.error('Auth xato:', e);
+  } catch {
+    // Server yetib bormasa landing ko'rsat
+    document.getElementById('landingPage').style.display = 'block';
+    document.getElementById('headerGuest').style.display = 'flex';
   }
 }
 
@@ -508,12 +598,11 @@ function showApp(data) {
   document.getElementById('headerGuest').style.display = 'none';
   document.getElementById('headerUser').style.display = 'flex';
 
-  const avatar = document.getElementById('userAvatar');
-  const initials = (data.name || data.email || '?')[0].toUpperCase();
-  avatar.src = '';
-  avatar.alt = initials;
-  avatar.style.background = '#333';
-  avatar.style.display = 'flex';
+  // Avatar: initials
+  const avatarEl = document.getElementById('userAvatar');
+  const initial = (data.name || data.email || '?')[0].toUpperCase();
+  avatarEl.textContent = initial;
+  avatarEl.setAttribute('data-initial', initial);
 
   document.getElementById('userDropdownName').textContent = data.name || data.email;
   document.getElementById('userDropdownEmail').textContent = data.email;
@@ -521,8 +610,10 @@ function showApp(data) {
 
   const upgradeBtn = document.getElementById('upgradeBtn');
   if (data.isPremium) {
-    upgradeBtn.textContent = '⚡ Premium';
+    upgradeBtn.textContent = '⚡ Premium faol';
     upgradeBtn.classList.add('premium-active');
+  } else {
+    upgradeBtn.textContent = '⚡ Premium';
   }
 
   const tierBanner = document.getElementById('tierBanner');
@@ -552,9 +643,15 @@ async function emailLogin(email) {
       body: JSON.stringify({ email }),
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Xato'; btn.disabled = false; btn.textContent = 'Kirish'; return; }
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Xato yuz berdi';
+      btn.disabled = false;
+      btn.textContent = 'Kirish';
+      return;
+    }
     const me = await (await fetch('/api/me')).json();
-    showApp(me);
+    if (me.loggedIn) showApp(me);
+    else { errEl.textContent = 'Kirish amalga oshmadi'; btn.disabled = false; btn.textContent = 'Kirish'; }
   } catch {
     errEl.textContent = 'Server bilan ulanishda xato';
     btn.disabled = false;
@@ -574,14 +671,14 @@ document.getElementById('emailInput').addEventListener('keydown', e => {
   }
 });
 
-// Header "Kirish" tugmasi — landing ga scroll
 document.getElementById('headerLoginBtn')?.addEventListener('click', () => {
-  document.getElementById('landingPage').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('landingPage').style.display = 'block';
   document.getElementById('emailInput')?.focus();
 });
 
 // Avatar dropdown
-document.getElementById('userAvatar').addEventListener('click', () => {
+document.getElementById('userAvatar').addEventListener('click', e => {
+  e.stopPropagation();
   const dd = document.getElementById('userDropdown');
   dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
 });
@@ -595,7 +692,6 @@ document.addEventListener('click', e => {
 // Logout
 document.getElementById('userDropdown').addEventListener('click', async e => {
   if (e.target.classList.contains('user-dropdown-logout')) {
-    e.preventDefault();
     await fetch('/auth/logout', { method: 'POST' });
     location.reload();
   }

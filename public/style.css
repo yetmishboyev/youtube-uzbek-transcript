@@ -111,11 +111,15 @@ html, body {
 
 .user-menu { position: relative; }
 .user-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 34px; height: 34px; border-radius: 50%;
   cursor: pointer; border: 2px solid var(--border);
-  transition: border-color var(--transition);
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: white; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color var(--transition), transform var(--transition);
+  user-select: none; flex-shrink: 0;
 }
-.user-avatar:hover { border-color: var(--red); }
+.user-avatar:hover { border-color: var(--red); transform: scale(1.05); }
 
 .user-dropdown {
   position: absolute; top: calc(100% + 10px); right: 0;
@@ -360,7 +364,8 @@ html, body {
   transition: opacity 0.15s ease;
 }
 
-.subtitle-overlay:empty { opacity: 0; }
+.subtitle-overlay { opacity: 0; transition: opacity 0.15s ease; }
+.subtitle-overlay.visible { opacity: 1; }
 
 .subtitle-overlay span {
   display: inline;
@@ -755,7 +760,7 @@ html, body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s, transform 0.25s;
-  z-index: 1000;
+  z-index: 1001;
   white-space: nowrap;
 }
 
@@ -849,7 +854,7 @@ html, body {
   width: 100%; background: var(--surface2);
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);
   padding: 13px 16px; color: var(--text); font-size: 15px;
-  outline: none; text-align: center;
+  outline: none; text-align: left;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .email-input:focus {

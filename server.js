@@ -50,11 +50,11 @@ app.use(loadUser);
 /* ─── Auth routes ──────────────────────────────────────────────── */
 app.post('/auth/email', async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+  if (!email || !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email))
     return res.status(400).json({ error: "To'g'ri email kiriting" });
 
   try {
-    const name = email.split('@')[0];
+    const name = (email.split('@')[0] || 'user').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 50) || 'user';
     const { rows } = await pool.query(
       `INSERT INTO users (email, name)
        VALUES ($1, $2)
@@ -70,7 +70,10 @@ app.post('/auth/email', async (req, res) => {
 });
 
 app.post('/auth/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
+  req.session.destroy(err => {
+    if (err) console.error('Session destroy xato:', err.message);
+    res.json({ ok: true });
+  });
 });
 
 app.get('/api/me', (req, res) => {
@@ -172,7 +175,7 @@ async function translateGoogle(text, sourceLang = 'auto', retries = 2) {
     try {
       const resp = await axios.get('https://translate.googleapis.com/translate_a/single', {
         params: { client: 'gtx', sl: sourceLang, tl: 'uz', dt: 't', q },
-        timeout: 12000,
+        timeout: 5000,
         headers: { 'User-Agent': 'Mozilla/5.0' },
       });
       if (Array.isArray(resp.data?.[0])) {
@@ -437,10 +440,16 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   const engine = anthropic ? '✨ Claude Haiku' : '🌐 Google Translate (fallback)';
   console.log(`\n🎬 YouTube O'zbek Transkript`);
   console.log(`📡 Server: http://localhost:${PORT}`);
   console.log(`🤖 Whisper: small model`);
-  console.log(`${engine}: tarjima\n`);
+  console.log(`${engine}: tarjima`);
+  try {
+    await pool.query('SELECT 1');
+    console.log(`🗄️  PostgreSQL: ulandi\n`);
+  } catch (e) {
+    console.error(`❌ PostgreSQL ulanmadi: ${e.message}\n`);
+  }
 });
