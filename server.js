@@ -216,15 +216,16 @@ function setupSSE(res) {
 }
 
 /* ─── Segmentlarni tarjima qilib stream qilish ─────────────────── */
-async function translateAndStream(transcript, lang, send, needsTranslation) {
+async function translateAndStream(transcript, lang, send, needsTranslation, isCancelled = () => false) {
   const total = transcript.length;
 
   if (!needsTranslation) {
-    transcript.forEach((item, i) => {
-      const t = decodeEntities(item.text);
-      send({ type: 'segment', index: i, offset: item.offset, duration: item.duration,
+    for (let i = 0; i < total; i++) {
+      if (isCancelled()) return;
+      const t = decodeEntities(transcript[i].text);
+      send({ type: 'segment', index: i, offset: transcript[i].offset, duration: transcript[i].duration,
         originalText: t, translatedText: t });
-    });
+    }
     return;
   }
 
@@ -232,11 +233,13 @@ async function translateAndStream(transcript, lang, send, needsTranslation) {
   send({ type: 'engine', engine });
 
   for (let i = 0; i < total; i += BATCH) {
+    if (isCancelled()) return;
     const batch = transcript.slice(i, Math.min(i + BATCH, total));
     const texts = batch.map(item => decodeEntities(item.text));
 
     const translated = await translateBatch(texts, lang === 'auto' ? 'en' : lang);
 
+    if (isCancelled()) return;
     batch.forEach((item, j) => {
       send({
         type: 'segment', index: i + j,
@@ -260,18 +263,24 @@ app.get('/api/transcript', async (req, res) => {
 
   const { send, finish } = setupSSE(res);
 
+  let cancelled = false;
+  req.on('close', () => { cancelled = true; });
+  const isCancelled = () => cancelled;
+
   try {
     /* ── 1. YouTube subtitri ── */
     send({ type: 'status', message: 'YouTube subtitrlar tekshirilmoqda...' });
     const captionResult = await fetchYouTubeCaptions(videoId);
+
+    if (isCancelled()) return finish();
 
     if (captionResult) {
       const { transcript, lang } = captionResult;
       const needsTranslation = lang !== 'uz';
       send({ type: 'start', total: transcript.length, needsTranslation, videoId,
         source: 'captions', lang });
-      await translateAndStream(transcript, lang, send, needsTranslation);
-      send({ type: 'done' });
+      await translateAndStream(transcript, lang, send, needsTranslation, isCancelled);
+      if (!isCancelled()) send({ type: 'done' });
       return finish();
     }
 
@@ -290,6 +299,8 @@ app.get('/api/transcript', async (req, res) => {
       return finish();
     }
 
+    if (isCancelled()) return finish();
+
     const tmpFiles = fs.readdirSync(os.tmpdir()).filter(f => f.startsWith(tmpPrefix));
     if (!tmpFiles.length) {
       send({ type: 'error', message: 'Audio fayl topilmadi' });
@@ -307,6 +318,8 @@ app.get('/api/transcript', async (req, res) => {
     }
     cleanupFiles(tmpPrefix);
 
+    if (isCancelled()) return finish();
+
     const { segments: segs, language: detectedLang } = whisperResult;
     if (!segs?.length) {
       send({ type: 'error', message: "Audio transkriptsiya bo'sh natija" });
@@ -319,8 +332,8 @@ app.get('/api/transcript', async (req, res) => {
 
     // Whisper segmentlarini transcript formatiga o'tkazish
     const asTranscript = segs.map(s => ({ text: s.text, offset: s.offset, duration: s.duration }));
-    await translateAndStream(asTranscript, detectedLang, send, needsTranslation);
-    send({ type: 'done' });
+    await translateAndStream(asTranscript, detectedLang, send, needsTranslation, isCancelled);
+    if (!isCancelled()) send({ type: 'done' });
     finish();
 
   } catch (err) {
