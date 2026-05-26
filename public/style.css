@@ -301,7 +301,7 @@ html, body {
 
 .subtitle-overlay {
   position: absolute;
-  bottom: 4%;
+  bottom: 8%;
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -318,7 +318,7 @@ html, body {
   display: inline;
   background: none;
   color: #ffffff;
-  font-size: clamp(20px, 2.6vw, 32px);
+  font-size: clamp(16px, 2vw, 26px);
   font-weight: 700;
   line-height: 1.7;
   padding: 0;
