@@ -200,6 +200,8 @@ html, body {
 .main {
   height: calc(100vh - 54px - 73px);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ============================================================
@@ -253,13 +255,13 @@ html, body {
 .feature-icon { font-size: 16px; }
 
 /* ============================================================
-   Workspace (Split Layout)
+   Workspace (Side by Side)
    ============================================================ */
 .workspace {
-  display: grid;
-  grid-template-columns: 55fr 45fr;
+  display: flex;
+  flex-direction: row;
   height: 100%;
-  gap: 0;
+  overflow: hidden;
 }
 
 /* ============================================================
@@ -270,7 +272,8 @@ html, body {
   flex-direction: column;
   background: #000;
   border-right: 1px solid var(--border);
-  overflow: hidden;
+  flex: 0 0 60%;
+  min-width: 0;
 }
 
 .video-title {
@@ -287,22 +290,55 @@ html, body {
 
 .player-wrapper {
   flex: 1;
-  position: relative;
+  min-height: 0;
   background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   overflow: hidden;
+  position: relative;
+}
+
+.subtitle-overlay {
+  position: absolute;
+  bottom: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 85%;
+  text-align: center;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.15s ease;
+}
+
+.subtitle-overlay:empty { opacity: 0; }
+
+.subtitle-overlay span {
+  display: inline;
+  background: rgba(8, 8, 8, 0.82);
+  color: #ffffff;
+  font-size: clamp(13px, 1.6vw, 20px);
+  font-weight: 500;
+  line-height: 1.7;
+  padding: 3px 8px;
+  border-radius: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  letter-spacing: 0.01em;
 }
 
 .player-wrapper iframe {
-  position: absolute;
-  inset: 0;
-  width: 100%;
   height: 100%;
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
   border: none;
 }
 
 #ytPlayer {
-  position: absolute;
-  inset: 0;
+  height: 100%;
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
 }
 
 .player-controls {
@@ -331,6 +367,8 @@ html, body {
    Transcript Panel (Right)
    ============================================================ */
 .transcript-panel {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -680,14 +718,17 @@ html, body {
    ============================================================ */
 @media (max-width: 900px) {
   .workspace {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    flex-direction: column;
   }
 
   .player-panel {
+    flex: 0 0 auto;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    max-height: 280px;
+  }
+
+  .player-wrapper {
+    height: 220px;
   }
 
   .main {

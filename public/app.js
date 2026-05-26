@@ -13,6 +13,7 @@ let syncInterval = null;
 let lastUrl = '';
 let videoId = null;
 let isLoading = false;
+let currentEvtSource = null;
 
 // DOM refs
 const urlInput    = document.getElementById('urlInput');
@@ -40,7 +41,8 @@ const segmentCount  = document.getElementById('segmentCount');
 const videoTitle  = document.getElementById('videoTitle');
 const currentTimeEl = document.getElementById('currentTime');
 const totalTimeEl   = document.getElementById('totalTime');
-const muteBtn     = document.getElementById('muteBtn');
+const muteBtn          = document.getElementById('muteBtn');
+const subtitleOverlay  = document.getElementById('subtitleOverlay');
 
 /* ============================================================
    YouTube IFrame API
@@ -67,7 +69,7 @@ function onPlayerStateChange(e) {
 
 function startSyncLoop() {
   if (syncInterval) clearInterval(syncInterval);
-  syncInterval = setInterval(syncTranscript, 300);
+  syncInterval = setInterval(syncTranscript, 100);
 }
 
 /* ============================================================
@@ -79,13 +81,11 @@ function syncTranscript() {
   currentTimeEl.textContent = formatTime(cur);
   if (!segments.length) return;
 
+  // List highlight: last segment whose start <= cur
   let newIdx = -1;
   for (let i = segments.length - 1; i >= 0; i--) {
     if (!segments[i]) continue;
-    const start = segments[i].offset / 1000;
-    const end   = start + segments[i].duration / 1000;
-    if (cur >= start && cur < end) { newIdx = i; break; }
-    if (cur >= start) { newIdx = i; break; }
+    if (cur >= segments[i].offset / 1000) { newIdx = i; break; }
   }
 
   if (newIdx !== currentActiveIndex) {
@@ -97,6 +97,22 @@ function syncTranscript() {
     }
     currentActiveIndex = newIdx;
   }
+
+  // Overlay: strict time range — show only while start <= cur < end
+  let overlayText = '';
+  if (newIdx >= 0) {
+    const seg = segments[newIdx];
+    const start = seg.offset / 1000;
+    const end   = start + seg.duration / 1000;
+    if (cur >= start && cur < end) overlayText = seg.translatedText;
+  }
+  const current = subtitleOverlay.firstChild;
+  if (overlayText) {
+    if (!current || current.textContent !== overlayText)
+      subtitleOverlay.innerHTML = `<span>${escHtml(overlayText)}</span>`;
+  } else if (subtitleOverlay.innerHTML) {
+    subtitleOverlay.innerHTML = '';
+  }
 }
 
 /* ============================================================
@@ -104,7 +120,11 @@ function syncTranscript() {
    ============================================================ */
 async function load() {
   const url = urlInput.value.trim();
-  if (!url || isLoading) return;
+  if (!url) return;
+
+  // Oldingi stream bo'lsa to'xtat
+  if (currentEvtSource) { currentEvtSource.close(); currentEvtSource = null; }
+  isLoading = false;
 
   const vid = extractVideoId(url);
   if (!vid) { showToast("⚠️ Noto'g'ri YouTube URL formati"); urlInput.focus(); return; }
@@ -151,6 +171,7 @@ async function fetchVideoInfo(url) {
 
 function streamTranscript(url) {
   const evtSource = new EventSource(`/api/transcript?url=${encodeURIComponent(url)}`);
+  currentEvtSource = evtSource;
   let total = 0;
   let loaded = 0;
 
@@ -209,6 +230,7 @@ function streamTranscript(url) {
 
     if (msg.type === 'done') {
       evtSource.close();
+      currentEvtSource = null;
       setLoadingState(false);
       isLoading = false;
       loadingBar.style.display = 'none';
@@ -219,6 +241,7 @@ function streamTranscript(url) {
 
     if (msg.type === 'error') {
       evtSource.close();
+      currentEvtSource = null;
       isLoading = false;
       setLoadingState(false);
       loadingBar.style.display = 'none';
@@ -229,6 +252,7 @@ function streamTranscript(url) {
   evtSource.onerror = () => {
     if (isLoading) {
       evtSource.close();
+      currentEvtSource = null;
       isLoading = false;
       setLoadingState(false);
       loadingBar.style.display = 'none';
@@ -284,6 +308,7 @@ function removeFirstSkeleton() {
 
 function resetTranscriptPanel() {
   segmentsEl.innerHTML = '';
+  subtitleOverlay.innerHTML = '';
   errorState.style.display = 'none';
   sourceBadge.style.display = 'none';
   whisperBadge.style.display = 'none';
@@ -298,7 +323,7 @@ function resetTranscriptPanel() {
 
 function showWorkspace() {
   welcome.style.display = 'none';
-  workspace.style.display = 'grid';
+  workspace.style.display = 'flex';
 }
 
 function setLoadingState(loading) {
