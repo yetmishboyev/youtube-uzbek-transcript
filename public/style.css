@@ -131,10 +131,11 @@ html, body {
   display: inline-block; margin-bottom: 10px;
 }
 .user-dropdown-logout {
-  display: block; text-align: center; background: var(--surface3);
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  color: var(--text2); padding: 6px; font-size: 13px;
-  text-decoration: none; transition: all var(--transition);
+  display: block; width: 100%; text-align: center;
+  background: var(--surface3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text2);
+  padding: 6px; font-size: 13px; cursor: pointer;
+  transition: all var(--transition);
 }
 .user-dropdown-logout:hover { background: rgba(255,0,0,0.1); color: var(--red); border-color: var(--red); }
 
@@ -839,17 +840,36 @@ html, body {
 
 .tier-features li::before { content: '✓'; color: var(--green); font-weight: 700; }
 
-.btn-google-login {
-  display: flex; align-items: center; gap: 10px;
-  background: white; color: #333;
-  border: none; border-radius: var(--radius);
-  padding: 14px 28px; font-size: 15px; font-weight: 600;
-  cursor: pointer; text-decoration: none;
-  transition: all var(--transition);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-  margin-top: 8px;
+.email-login-form {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; width: 100%; max-width: 360px; margin-top: 8px;
 }
-.btn-google-login:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+
+.email-input {
+  width: 100%; background: var(--surface2);
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 13px 16px; color: var(--text); font-size: 15px;
+  outline: none; text-align: center;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.email-input:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(255,0,0,0.1);
+}
+.email-input::placeholder { color: var(--text3); }
+
+.btn-email-login {
+  width: 100%; background: var(--red); border: none;
+  border-radius: var(--radius-sm); color: white;
+  font-size: 15px; font-weight: 600; padding: 13px;
+  cursor: pointer; transition: background var(--transition);
+}
+.btn-email-login:hover { background: #cc0000; }
+.btn-email-login:disabled { background: #666; cursor: not-allowed; }
+
+.email-login-error {
+  font-size: 13px; color: #f87171; min-height: 18px;
+}
 
 .tier-info-banner {
   margin-top: 12px; font-size: 12px;

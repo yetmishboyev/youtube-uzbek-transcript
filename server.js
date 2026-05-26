@@ -8,8 +8,6 @@ const { execFile, spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const session = require('express-session');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { Pool } = require('pg');
 const pgSession = require('connect-pg-simple')(session);
 
@@ -27,57 +25,52 @@ const anthropic = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY
 // PostgreSQL pool
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-/* ─── Session + Passport ───────────────────────────────────────── */
+/* ─── Session ──────────────────────────────────────────────────── */
+app.use(express.json());
 app.use(session({
   store: new pgSession({ pool, tableName: 'sessions' }),
   secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, // 30 kun
+  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
 }));
 
-app.use(passport.initialize());
-app.use(passport.session());
-
-passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser(async (id, done) => {
-  try {
-    const { rows } = await pool.query('SELECT * FROM users WHERE id=$1', [id]);
-    done(null, rows[0] || null);
-  } catch (e) { done(e); }
-});
-
-passport.use(new GoogleStrategy({
-  clientID:     process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL:  process.env.GOOGLE_CALLBACK_URL,
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    const email = profile.emails?.[0]?.value || '';
-    const picture = profile.photos?.[0]?.value || '';
-    const { rows } = await pool.query(
-      `INSERT INTO users (google_id, email, name, picture)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (google_id) DO UPDATE SET name=$3, picture=$4
-       RETURNING *`,
-      [profile.id, email, profile.displayName, picture]
-    );
-    done(null, rows[0]);
-  } catch (e) { done(e); }
-}));
+/* ─── Auth middleware ──────────────────────────────────────────── */
+async function loadUser(req, res, next) {
+  if (req.session.userId) {
+    try {
+      const { rows } = await pool.query('SELECT * FROM users WHERE id=$1', [req.session.userId]);
+      req.user = rows[0] || null;
+    } catch { req.user = null; }
+  }
+  next();
+}
+app.use(loadUser);
 
 /* ─── Auth routes ──────────────────────────────────────────────── */
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+app.post('/auth/email', async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ error: "To'g'ri email kiriting" });
 
-app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/?error=auth' }),
-  (req, res) => res.redirect('/')
-);
+  try {
+    const name = email.split('@')[0];
+    const { rows } = await pool.query(
+      `INSERT INTO users (email, name)
+       VALUES ($1, $2)
+       ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name
+       RETURNING *`,
+      [email, name]
+    );
+    req.session.userId = rows[0].id;
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Server xato' });
+  }
+});
 
-app.get('/auth/logout', (req, res) => {
-  req.logout(() => res.redirect('/'));
+app.post('/auth/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
 });
 
 app.get('/api/me', (req, res) => {
@@ -86,19 +79,16 @@ app.get('/api/me', (req, res) => {
     loggedIn: true,
     name: req.user.name,
     email: req.user.email,
-    picture: req.user.picture,
     isPremium: req.user.is_premium,
   });
 });
 
-// Upgrade placeholder (to'lov tizimi keyinroq qo'shiladi)
 app.post('/api/upgrade', (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Login kerak' });
   res.json({ status: 'coming_soon', message: "To'lov tizimi tez kunda qo'shiladi!" });
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
 
 /* ─── URL parsing ──────────────────────────────────────────────── */
 function extractVideoId(url) {

@@ -495,40 +495,92 @@ async function initAuth() {
       return;
     }
 
-    currentUser = data;
-    document.getElementById('landingPage').style.display = 'none';
-    document.getElementById('appContainer').style.display = 'block';
-    document.getElementById('headerGuest').style.display = 'none';
-    document.getElementById('headerUser').style.display = 'flex';
-
-    const avatar = document.getElementById('userAvatar');
-    if (data.picture) avatar.src = data.picture;
-
-    document.getElementById('userDropdownName').textContent = data.name || '';
-    document.getElementById('userDropdownEmail').textContent = data.email || '';
-    document.getElementById('userDropdownTier').textContent = data.isPremium ? '⚡ Premium' : 'Bepul tarif';
-
-    const upgradeBtn = document.getElementById('upgradeBtn');
-    if (data.isPremium) {
-      upgradeBtn.textContent = '⚡ Premium';
-      upgradeBtn.classList.add('premium-active');
-    }
-
-    const tierBanner = document.getElementById('tierBanner');
-    if (data.isPremium) {
-      tierBanner.textContent = '⚡ Premium: Claude AI tarjima faol';
-      tierBanner.style.borderColor = '#f59e0b';
-      tierBanner.style.color = '#f59e0b';
-    } else {
-      tierBanner.textContent = 'Bepul tarif: Google Translate ishlatilmoqda';
-    }
-
-    urlInput.focus();
+    showApp(data);
   } catch (e) {
     console.error('Auth xato:', e);
   }
 }
 
+function showApp(data) {
+  currentUser = data;
+  document.getElementById('landingPage').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'block';
+  document.getElementById('headerGuest').style.display = 'none';
+  document.getElementById('headerUser').style.display = 'flex';
+
+  const avatar = document.getElementById('userAvatar');
+  const initials = (data.name || data.email || '?')[0].toUpperCase();
+  avatar.src = '';
+  avatar.alt = initials;
+  avatar.style.background = '#333';
+  avatar.style.display = 'flex';
+
+  document.getElementById('userDropdownName').textContent = data.name || data.email;
+  document.getElementById('userDropdownEmail').textContent = data.email;
+  document.getElementById('userDropdownTier').textContent = data.isPremium ? '⚡ Premium' : 'Bepul tarif';
+
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  if (data.isPremium) {
+    upgradeBtn.textContent = '⚡ Premium';
+    upgradeBtn.classList.add('premium-active');
+  }
+
+  const tierBanner = document.getElementById('tierBanner');
+  if (data.isPremium) {
+    tierBanner.textContent = '⚡ Premium: Claude AI tarjima faol';
+    tierBanner.style.borderColor = '#f59e0b';
+    tierBanner.style.color = '#f59e0b';
+  } else {
+    tierBanner.textContent = 'Bepul tarif: Google Translate ishlatilmoqda';
+  }
+
+  urlInput.focus();
+}
+
+// Email login
+async function emailLogin(email) {
+  const btn = document.getElementById('emailLoginBtn');
+  const errEl = document.getElementById('emailLoginError');
+  btn.disabled = true;
+  btn.textContent = 'Kirilmoqda...';
+  errEl.textContent = '';
+
+  try {
+    const res = await fetch('/auth/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Xato'; btn.disabled = false; btn.textContent = 'Kirish'; return; }
+    const me = await (await fetch('/api/me')).json();
+    showApp(me);
+  } catch {
+    errEl.textContent = 'Server bilan ulanishda xato';
+    btn.disabled = false;
+    btn.textContent = 'Kirish';
+  }
+}
+
+document.getElementById('emailLoginBtn').addEventListener('click', () => {
+  const email = document.getElementById('emailInput').value.trim();
+  if (email) emailLogin(email);
+});
+
+document.getElementById('emailInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const email = e.target.value.trim();
+    if (email) emailLogin(email);
+  }
+});
+
+// Header "Kirish" tugmasi — landing ga scroll
+document.getElementById('headerLoginBtn')?.addEventListener('click', () => {
+  document.getElementById('landingPage').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('emailInput')?.focus();
+});
+
+// Avatar dropdown
 document.getElementById('userAvatar').addEventListener('click', () => {
   const dd = document.getElementById('userDropdown');
   dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
@@ -540,6 +592,16 @@ document.addEventListener('click', e => {
     document.getElementById('userDropdown').style.display = 'none';
 });
 
+// Logout
+document.getElementById('userDropdown').addEventListener('click', async e => {
+  if (e.target.classList.contains('user-dropdown-logout')) {
+    e.preventDefault();
+    await fetch('/auth/logout', { method: 'POST' });
+    location.reload();
+  }
+});
+
+// Upgrade modal
 document.getElementById('upgradeBtn').addEventListener('click', () => {
   document.getElementById('upgradeModal').style.display = 'flex';
 });
