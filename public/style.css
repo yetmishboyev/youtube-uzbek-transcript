@@ -301,9 +301,9 @@ html, body {
 
 .subtitle-overlay {
   position: absolute;
-  bottom: 50%;
+  bottom: 4%;
   left: 50%;
-  transform: translate(-50%, 50%);
+  transform: translateX(-50%);
   width: max-content;
   max-width: 85%;
   text-align: center;
