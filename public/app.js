@@ -166,6 +166,10 @@ function streamTranscript(url) {
       loadingFill.style.background = 'linear-gradient(90deg, #ce93d8, #7e57c2)';
     }
 
+    if (msg.type === 'engine') {
+      loadingStatus.textContent = `${msg.engine} bilan tarjima qilinmoqda...`;
+    }
+
     if (msg.type === 'start') {
       total = msg.total;
       segmentCount.textContent = `0 / ${total}`;
@@ -181,9 +185,7 @@ function streamTranscript(url) {
       sourceBadge.style.display = 'flex';
 
       if (msg.needsTranslation) {
-        loadingStatus.textContent = msg.source === 'whisper'
-          ? `Tarjima qilinmoqda (${total} segment)...`
-          : `Google Translate: ${total} segment tarjima qilinmoqda...`;
+        loadingStatus.textContent = `Tarjima qilinmoqda (${total} segment)...`;
       } else {
         loadingStatus.textContent = `O'zbek subtitrlar yuklanmoqda (${total} segment)...`;
       }
