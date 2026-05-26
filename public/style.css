@@ -317,7 +317,7 @@ html, body {
 .subtitle-overlay span {
   display: inline;
   background: none;
-  color: #ffffff;
+  color: #FFE234;
   font-size: clamp(20px, 2.6vw, 32px);
   font-weight: 700;
   line-height: 1.7;
