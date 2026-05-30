@@ -637,6 +637,8 @@ async function initAuth() {
       document.getElementById('landingPage').style.display = 'block';
       document.getElementById('appContainer').style.display = 'none';
       document.getElementById('headerGuest').style.display = 'flex';
+      document.getElementById('emailLoginForm').style.display = 'none';
+      document.querySelector('.landing-tiers').style.display = 'flex';
       loadUsage();
       return;
     }
@@ -732,8 +734,40 @@ document.getElementById('emailInput').addEventListener('keydown', e => {
 });
 
 document.getElementById('headerLoginBtn')?.addEventListener('click', () => {
-  document.getElementById('landingPage').style.display = 'block';
-  document.getElementById('emailInput')?.focus();
+  showLoginForm("Kirish / Ro'yxatdan o'tish");
+});
+
+// Landing tugmalari
+function showLoginForm(title = "Ro'yxatdan o'tish") {
+  document.getElementById('loginFormTitle').textContent = title;
+  document.getElementById('emailLoginForm').style.display = 'flex';
+  document.querySelector('.landing-tiers').style.display = 'none';
+  setTimeout(() => document.getElementById('emailInput').focus(), 50);
+}
+
+function hideLoginForm() {
+  document.getElementById('emailLoginForm').style.display = 'none';
+  document.querySelector('.landing-tiers').style.display = 'flex';
+}
+
+document.getElementById('showLoginBtn')?.addEventListener('click', () => {
+  showLoginForm("Bepul ro'yxatdan o'ting");
+});
+
+document.getElementById('showLoginPremiumBtn')?.addEventListener('click', () => {
+  showLoginForm("Premium boshlash uchun kiring");
+});
+
+document.getElementById('backToTiersBtn')?.addEventListener('click', hideLoginForm);
+
+document.getElementById('tryWithoutLoginBtn')?.addEventListener('click', () => {
+  document.getElementById('landingPage').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'block';
+  document.getElementById('headerGuest').style.display = 'flex';
+  document.getElementById('headerUser').style.display = 'none';
+  document.getElementById('sharePostBtn').style.display = 'none';
+  loadUsage();
+  urlInput.focus();
 });
 
 // Avatar dropdown

@@ -45,6 +45,8 @@
   <!-- Landing page (login bo'lmagan foydalanuvchilar uchun) -->
   <div id="landingPage" style="display:none">
     <div class="landing-hero">
+
+      <!-- Hero -->
       <div class="landing-icon">
         <svg width="90" height="64" viewBox="0 0 90 64" fill="none">
           <rect width="90" height="64" rx="14" fill="#FF0000" opacity="0.15"/>
@@ -54,8 +56,9 @@
       </div>
       <h1>YouTube O'zbek Transkript</h1>
       <p>YouTube videolarini real vaqtda o'zbek tiliga tarjima qiling.<br/>
-         Subtitrlari bilan birga video ko'ring.</p>
+         Subtitrlar bilan birga video tomosha qiling.</p>
 
+      <!-- Xususiyatlar -->
       <div class="landing-features">
         <div class="landing-feature">
           <div class="lf-icon">🔄</div>
@@ -72,43 +75,81 @@
           </div>
         </div>
         <div class="landing-feature">
-          <div class="lf-icon">📥</div>
+          <div class="lf-icon">✨</div>
           <div class="lf-text">
-            <strong>Yuklab olish</strong>
-            <span>Transkriptni saqlash imkoni</span>
+            <strong>AI yordamida</strong>
+            <span>Grgitton sun'iy intellekti</span>
           </div>
         </div>
       </div>
 
+      <!-- Tariflar -->
       <div class="landing-tiers">
-        <div class="tier-card tier-free">
-          <div class="tier-name">Bepul</div>
-          <div class="tier-price">$0 / oy</div>
+
+        <!-- Login yo'q -->
+        <div class="tier-card tier-guest">
+          <div class="tier-icon">👤</div>
+          <div class="tier-name">Mehmon</div>
+          <div class="tier-price">Bepul</div>
           <ul class="tier-features">
+            <li>Kuniga <strong>2 ta</strong> video</li>
             <li>Grgitton tarjimasi</li>
-            <li>Cheksiz videolar</li>
             <li>Subtitle overlay</li>
-            <li>Yuklab olish</li>
+            <li class="tier-no">Saqlash imkoni yo'q</li>
+            <li class="tier-no">AI post yo'q</li>
           </ul>
+          <button class="tier-cta tier-cta-guest" id="tryWithoutLoginBtn">
+            Hozir sinab ko'ring
+          </button>
         </div>
-        <div class="tier-card tier-premium">
-          <div class="tier-badge">Tavsiya etiladi</div>
-          <div class="tier-name">Premium</div>
-          <div class="tier-price">$5 / oy</div>
+
+        <!-- Bepul (ro'yxatdan o'tgan) -->
+        <div class="tier-card tier-free">
+          <div class="tier-icon">🆓</div>
+          <div class="tier-name">Bepul</div>
+          <div class="tier-price">$0 <span>/oy</span></div>
           <ul class="tier-features">
-            <li>Grgitton AI (sifatli tarjima)</li>
-            <li>Cheksiz videolar</li>
+            <li>Kuniga <strong>5 ta</strong> video</li>
+            <li>Grgitton tarjimasi</li>
             <li>Subtitle overlay</li>
             <li>Yuklab olish</li>
+            <li class="tier-no">AI post yo'q</li>
           </ul>
+          <button class="tier-cta tier-cta-free" id="showLoginBtn">
+            Ro'yxatdan o'tish
+          </button>
         </div>
+
+        <!-- Premium -->
+        <div class="tier-card tier-premium">
+          <div class="tier-badge">⚡ Eng yaxshi</div>
+          <div class="tier-icon">🚀</div>
+          <div class="tier-name">Premium</div>
+          <div class="tier-price">$5 <span>/oy</span></div>
+          <ul class="tier-features">
+            <li>Kuniga <strong>50 ta</strong> video</li>
+            <li>Grgitton AI — sifatli tarjima</li>
+            <li>Subtitle overlay</li>
+            <li>Yuklab olish</li>
+            <li>Kuniga <strong>20 ta</strong> AI post</li>
+            <li>Instagram, Telegram, LinkedIn...</li>
+          </ul>
+          <button class="tier-cta tier-cta-premium" id="showLoginPremiumBtn">
+            Premium boshlash
+          </button>
+        </div>
+
       </div>
 
-      <div class="email-login-form" id="emailLoginForm">
+      <!-- Login formasi -->
+      <div class="email-login-form" id="emailLoginForm" style="display:none">
+        <p class="login-form-title" id="loginFormTitle">Bepul ro'yxatdan o'ting</p>
         <input type="email" id="emailInput" class="email-input" placeholder="email@gmail.com" autocomplete="email" />
-        <button class="btn-email-login" id="emailLoginBtn">Kirish</button>
+        <button class="btn-email-login" id="emailLoginBtn">Kirish / Ro'yxatdan o'tish</button>
         <div class="email-login-error" id="emailLoginError"></div>
+        <button class="btn-back-landing" id="backToTiersBtn">← Orqaga</button>
       </div>
+
     </div>
   </div>
 
