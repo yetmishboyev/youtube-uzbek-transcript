@@ -16,6 +16,7 @@ let videoId = null;
 let isLoading = false;
 let currentEvtSource = null;
 let currentUser = null;
+let lastUsageData = null;
 
 // DOM refs
 const urlInput      = document.getElementById('urlInput');
@@ -522,6 +523,7 @@ function formatTime(sec) {
 }
 
 function updateUsageBar(used, limit) {
+  lastUsageData = { used, limit };
   const el = document.getElementById('usageBar');
   if (!el || !limit) return;
   const pct = Math.min(100, Math.round((used / limit) * 100));
@@ -531,6 +533,12 @@ function updateUsageBar(used, limit) {
     <div class="usage-track"><div class="usage-fill" style="width:${pct}%;background:${color}"></div></div>
   `;
   el.style.display = 'flex';
+  // Refresh welcome screen stats if it's already been rendered
+  const welcomeEl = document.getElementById('welcome');
+  if (welcomeEl && welcomeEl.querySelector('.wt-content')) {
+    const tier = currentUser === null ? 'guest' : (currentUser.isPremium ? 'premium' : 'free');
+    renderWelcomeScreen(tier);
+  }
 }
 
 async function loadUsage() {
@@ -676,17 +684,8 @@ function showApp(data) {
     upgradeBtn.textContent = '⚡ Premium';
   }
 
-  const tierBanner = document.getElementById('tierBanner');
-  if (data.isPremium) {
-    tierBanner.textContent = '⚡ Premium: Grgitton AI tarjima faol';
-    tierBanner.style.borderColor = '#f59e0b';
-    tierBanner.style.color = '#f59e0b';
-    document.getElementById('sharePostBtn').style.display = 'flex';
-  } else {
-    tierBanner.textContent = 'Bepul tarif: Grgitton tarjima faol';
-    document.getElementById('sharePostBtn').style.display = 'none';
-  }
-
+  document.getElementById('sharePostBtn').style.display = data.isPremium ? 'flex' : 'none';
+  renderWelcomeScreen(data.isPremium ? 'premium' : 'free');
   urlInput.focus();
 }
 
@@ -766,6 +765,7 @@ document.getElementById('tryWithoutLoginBtn')?.addEventListener('click', () => {
   document.getElementById('headerGuest').style.display = 'flex';
   document.getElementById('headerUser').style.display = 'none';
   document.getElementById('sharePostBtn').style.display = 'none';
+  renderWelcomeScreen('guest');
   loadUsage();
   urlInput.focus();
 });
@@ -874,6 +874,134 @@ async function generatePost(platform) {
     platforms.style.display = 'grid';
     loading.style.display = 'none';
   }
+}
+
+/* ============================================================
+   Welcome Screen — Tier-specific content
+   ============================================================ */
+function renderWelcomeScreen(tier) {
+  const el = document.getElementById('welcome');
+  if (!el) return;
+
+  const used = lastUsageData ? lastUsageData.used : 0;
+  const defaultLimit = tier === 'guest' ? 2 : tier === 'free' ? 5 : 50;
+  const limit = lastUsageData ? lastUsageData.limit : defaultLimit;
+  const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const barColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#22c55e';
+  const userDisplay = currentUser
+    ? escHtml((currentUser.name || currentUser.email || '').substring(0, 32))
+    : '';
+
+  let html = '';
+
+  if (tier === 'guest') {
+    html = `<div class="wt-content">
+      <div class="wt-header">
+        <div class="wt-icon">👤</div>
+        <h2 class="wt-title">Mehmon sifatida kirgansiz</h2>
+        <p class="wt-sub">YouTube havolasini yuqoriga kiriting va tarjimani boshlang</p>
+      </div>
+      <div class="wt-usage-card">
+        <div class="wt-usage-row">
+          <span class="wt-usage-lbl">Bugungi so'rovlar</span>
+          <span class="wt-usage-num">${used} / ${limit}</span>
+        </div>
+        <div class="wt-bar-track"><div class="wt-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      </div>
+      <div class="wt-limits-list">
+        <div class="wt-limit-row"><span class="wt-no-x">✗</span> Saqlash imkoni yo'q</div>
+        <div class="wt-limit-row"><span class="wt-no-x">✗</span> AI post yaratish yo'q</div>
+        <div class="wt-limit-row"><span class="wt-no-x">✗</span> Yuklab olish yo'q</div>
+      </div>
+      <div class="wt-cta-block">
+        <p class="wt-cta-hint">Ro'yxatdan o'tsangiz — kuniga <strong>5 ta</strong> video bepul!</p>
+        <button class="wt-btn wt-btn-free" id="welcomeRegisterBtn">Bepul ro'yxatdan o'tish</button>
+        <button class="wt-btn wt-btn-premium" id="welcomePremiumBtn">⚡ Premium boshlash — $5/oy</button>
+      </div>
+    </div>`;
+  } else if (tier === 'free') {
+    html = `<div class="wt-content">
+      <div class="wt-header">
+        <div class="wt-icon">🆓</div>
+        <h2 class="wt-title">Bepul tarif faol</h2>
+        ${userDisplay ? `<p class="wt-sub">${userDisplay}</p>` : ''}
+      </div>
+      <div class="wt-usage-card">
+        <div class="wt-usage-row">
+          <span class="wt-usage-lbl">Bugungi so'rovlar</span>
+          <span class="wt-usage-num">${used} / ${limit}</span>
+        </div>
+        <div class="wt-bar-track"><div class="wt-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      </div>
+      <div class="wt-upgrade-card">
+        <div class="wt-upgrade-hd">⚡ Premium'ga o'ting</div>
+        <ul class="wt-upgrade-ul">
+          <li>Kuniga <strong>50 ta</strong> video — 10× ko'p</li>
+          <li>Grgitton AI — aniqroq tarjima</li>
+          <li>Kuniga <strong>20 ta</strong> AI post</li>
+          <li>Instagram, Telegram, LinkedIn va boshqalar</li>
+        </ul>
+        <button class="wt-btn wt-btn-premium" id="welcomeUpgradeBtn">⚡ Premium boshlash — $5/oy</button>
+      </div>
+    </div>`;
+  } else {
+    html = `<div class="wt-content wt-premium-content">
+      <div class="wt-header">
+        <div class="wt-icon">⚡</div>
+        <h2 class="wt-title wt-title-premium">Premium faol</h2>
+        ${userDisplay ? `<p class="wt-sub">${userDisplay}</p>` : ''}
+      </div>
+      <div class="wt-stats-row">
+        <div class="wt-stat">
+          <div class="wt-stat-n" style="color:#22c55e">${used}</div>
+          <div class="wt-stat-l">Bugun ishlatildi</div>
+        </div>
+        <div class="wt-stat">
+          <div class="wt-stat-n">${limit}</div>
+          <div class="wt-stat-l">Kunlik limit</div>
+        </div>
+        <div class="wt-stat">
+          <div class="wt-stat-n" style="color:#f59e0b">20</div>
+          <div class="wt-stat-l">AI post / kun</div>
+        </div>
+      </div>
+      <div class="wt-features-grid">
+        <div class="wt-feat">🎯 Grgitton AI tarjima</div>
+        <div class="wt-feat">📱 6 platforma posti</div>
+        <div class="wt-feat">📥 Transkript yuklab olish</div>
+        <div class="wt-feat">🔍 Matn qidirish</div>
+        <div class="wt-feat">🎬 Real vaqt subtitlar</div>
+        <div class="wt-feat">🌐 Har qanday tildan</div>
+      </div>
+      <p class="wt-tip">💡 Yuqoriga YouTube havolasini kiriting va tarjimani boshlang</p>
+    </div>`;
+  }
+
+  el.innerHTML = html;
+
+  document.getElementById('welcomeRegisterBtn')?.addEventListener('click', () => {
+    document.getElementById('appContainer').style.display = 'none';
+    document.getElementById('landingPage').style.display = 'block';
+    document.getElementById('headerGuest').style.display = 'flex';
+    document.getElementById('headerUser').style.display = 'none';
+    document.querySelector('.landing-tiers').style.display = 'flex';
+    document.getElementById('emailLoginForm').style.display = 'none';
+    showLoginForm("Bepul ro'yxatdan o'ting");
+  });
+
+  document.getElementById('welcomePremiumBtn')?.addEventListener('click', () => {
+    document.getElementById('appContainer').style.display = 'none';
+    document.getElementById('landingPage').style.display = 'block';
+    document.getElementById('headerGuest').style.display = 'flex';
+    document.getElementById('headerUser').style.display = 'none';
+    document.querySelector('.landing-tiers').style.display = 'flex';
+    document.getElementById('emailLoginForm').style.display = 'none';
+    showLoginForm("Premium boshlash uchun kiring");
+  });
+
+  document.getElementById('welcomeUpgradeBtn')?.addEventListener('click', () => {
+    document.getElementById('upgradeModal').style.display = 'flex';
+  });
 }
 
 initAuth();
