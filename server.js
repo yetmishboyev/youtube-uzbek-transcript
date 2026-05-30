@@ -89,9 +89,26 @@ app.get('/api/me', (req, res) => {
   });
 });
 
-app.post('/api/upgrade', (req, res) => {
+app.post('/api/request-upgrade', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Login kerak' });
-  res.json({ status: 'coming_soon', message: "To'lov tizimi tez kunda qo'shiladi!" });
+  if (req.user.is_premium) return res.json({ ok: true, already: true });
+  try {
+    const { rows: existing } = await pool.query(
+      `SELECT id FROM upgrade_requests WHERE user_id=$1 AND created_at > NOW() - INTERVAL '1 day'`,
+      [req.user.id]
+    );
+    if (!existing.length) {
+      await pool.query(
+        `INSERT INTO upgrade_requests (user_id, email) VALUES ($1, $2)`,
+        [req.user.id, req.user.email]
+      );
+      await pool.query(
+        `INSERT INTO admin_log (admin_action, target_user_id, target_email, details) VALUES ($1,$2,$3,$4)`,
+        ['upgrade_request', req.user.id, req.user.email, `Premium so'rov: ${req.user.email}`]
+      );
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: 'Server xato' }); }
 });
 
 // last_seen yangilash
@@ -136,12 +153,13 @@ app.get('/admin', (req, res) => {
 // Dashboard stats
 app.get('/admin/api/stats', requireAdmin, async (req, res) => {
   try {
-    const [total, premium, today, week, active7d] = await Promise.all([
+    const [total, premium, today, week, active7d, pending] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM users'),
       pool.query('SELECT COUNT(*) FROM users WHERE is_premium=true'),
       pool.query("SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 day'"),
       pool.query("SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '7 days'"),
       pool.query("SELECT COUNT(*) FROM users WHERE last_seen >= NOW() - INTERVAL '7 days'"),
+      pool.query("SELECT COUNT(*) FROM upgrade_requests WHERE status='pending'").catch(() => ({ rows: [{ count: 0 }] })),
     ]);
     res.json({
       total: parseInt(total.rows[0].count),
@@ -150,7 +168,29 @@ app.get('/admin/api/stats', requireAdmin, async (req, res) => {
       newToday: parseInt(today.rows[0].count),
       newWeek: parseInt(week.rows[0].count),
       active7d: parseInt(active7d.rows[0].count),
+      pendingUpgrades: parseInt(pending.rows[0].count),
     });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Upgrade requests
+app.get('/admin/api/upgrade-requests', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT ur.id, ur.email, ur.created_at, ur.status, u.name, u.id as user_id, u.is_premium
+       FROM upgrade_requests ur
+       LEFT JOIN users u ON ur.user_id = u.id
+       ORDER BY ur.created_at DESC LIMIT 100`
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Mark upgrade request done
+app.patch('/admin/api/upgrade-requests/:id/done', requireAdmin, async (req, res) => {
+  try {
+    await pool.query(`UPDATE upgrade_requests SET status='done' WHERE id=$1`, [req.params.id]);
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -807,6 +847,15 @@ app.listen(PORT, async () => {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_logs_user   ON api_logs(user_id, endpoint, created_at)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_logs_ip     ON api_logs(ip_address, endpoint, created_at)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS upgrade_requests (
+        id         SERIAL PRIMARY KEY,
+        user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        email      VARCHAR(255),
+        status     VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
     console.log(`🗄️  PostgreSQL: ulandi\n`);
   } catch (e) {
     console.error(`❌ PostgreSQL ulanmadi: ${e.message}\n`);

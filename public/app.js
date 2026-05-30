@@ -650,8 +650,7 @@ async function initAuth() {
       loadUsage();
       return;
     }
-    showApp(data);
-    loadUsage();
+    showApp(data);  // loadUsage() is called inside showApp
   } catch {
     // Server yetib bormasa landing ko'rsat
     document.getElementById('landingPage').style.display = 'block';
@@ -661,6 +660,7 @@ async function initAuth() {
 
 function showApp(data) {
   currentUser = data;
+  lastUsageData = null;  // Stale anonymous data tozalanadi — to'g'ri tier limiti yuklanadi
   document.getElementById('landingPage').style.display = 'none';
   document.getElementById('appContainer').style.display = 'block';
   document.getElementById('headerGuest').style.display = 'none';
@@ -686,6 +686,7 @@ function showApp(data) {
 
   document.getElementById('sharePostBtn').style.display = data.isPremium ? 'flex' : 'none';
   renderWelcomeScreen(data.isPremium ? 'premium' : 'free');
+  loadUsage();
   urlInput.focus();
 }
 
@@ -792,9 +793,15 @@ document.getElementById('userDropdown').addEventListener('click', async e => {
 });
 
 // Upgrade modal
-document.getElementById('upgradeBtn').addEventListener('click', () => {
+function openUpgradeModal() {
+  document.getElementById('upgradeDefault').style.display = 'block';
+  document.getElementById('upgradeSuccess').style.display = 'none';
+  const btn = document.getElementById('requestUpgradeBtn');
+  if (btn) { btn.disabled = false; btn.textContent = "⚡ Premium so'rov yuborish"; }
   document.getElementById('upgradeModal').style.display = 'flex';
-});
+}
+
+document.getElementById('upgradeBtn').addEventListener('click', openUpgradeModal);
 
 document.getElementById('modalClose').addEventListener('click', () => {
   document.getElementById('upgradeModal').style.display = 'none';
@@ -803,6 +810,37 @@ document.getElementById('modalClose').addEventListener('click', () => {
 document.getElementById('upgradeModal').addEventListener('click', e => {
   if (e.target === document.getElementById('upgradeModal'))
     document.getElementById('upgradeModal').style.display = 'none';
+});
+
+document.getElementById('requestUpgradeBtn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('requestUpgradeBtn');
+  btn.disabled = true;
+  btn.textContent = 'Yuborilmoqda...';
+  try {
+    const res = await fetch('/api/request-upgrade', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      if (data.already) {
+        showToast('Siz allaqachon Premium foydalanuvchisiz!');
+        document.getElementById('upgradeModal').style.display = 'none';
+        return;
+      }
+      document.getElementById('upgradeDefault').style.display = 'none';
+      document.getElementById('upgradeSuccess').style.display = 'block';
+    } else {
+      showToast(data.error || "Xato yuz berdi");
+      btn.disabled = false;
+      btn.textContent = "⚡ Premium so'rov yuborish";
+    }
+  } catch {
+    showToast("Tarmoq xatosi");
+    btn.disabled = false;
+    btn.textContent = "⚡ Premium so'rov yuborish";
+  }
+});
+
+document.getElementById('upgradeSuccessClose')?.addEventListener('click', () => {
+  document.getElementById('upgradeModal').style.display = 'none';
 });
 
 /* ============================================================
@@ -999,9 +1037,7 @@ function renderWelcomeScreen(tier) {
     showLoginForm("Premium boshlash uchun kiring");
   });
 
-  document.getElementById('welcomeUpgradeBtn')?.addEventListener('click', () => {
-    document.getElementById('upgradeModal').style.display = 'flex';
-  });
+  document.getElementById('welcomeUpgradeBtn')?.addEventListener('click', openUpgradeModal);
 }
 
 initAuth();

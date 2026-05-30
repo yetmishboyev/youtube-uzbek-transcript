@@ -445,6 +445,19 @@
     }
     .btn-confirm-delete:hover { opacity: 0.85; }
 
+    /* Nav badge */
+    .nav-badge {
+      margin-left: auto;
+      background: var(--red);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+    }
+
     /* Relative time */
     .rel-time { font-size: 12px; color: var(--text3); }
 
@@ -530,6 +543,13 @@
           <polyline points="10 9 9 9 8 9"/>
         </svg>
         Harakatlar logi
+      </button>
+      <button class="nav-item" data-page="upgrades">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        Premium So'rovlar
+        <span class="nav-badge" id="navUpgradeBadge" style="display:none">0</span>
       </button>
       <button class="nav-item" data-page="system">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -648,6 +668,34 @@
               </tr>
             </thead>
             <tbody id="logBody">
+              <tr class="loading-row"><td colspan="5">Yuklanmoqda...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Upgrade Requests -->
+      <div class="page" id="page-upgrades">
+        <div class="page-header" style="display:flex;align-items:center;gap:16px;">
+          <div>
+            <h1>Premium So'rovlar</h1>
+            <p>Foydalanuvchilarning Premium tarif so'rovlari</p>
+          </div>
+          <div style="flex:1;"></div>
+          <button class="btn-refresh" id="upgradesRefreshBtn">Yangilash</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Ism</th>
+                <th>Holat</th>
+                <th>So'rov vaqti</th>
+                <th>Amallar</th>
+              </tr>
+            </thead>
+            <tbody id="upgradesBody">
               <tr class="loading-row"><td colspan="5">Yuklanmoqda...</td></tr>
             </tbody>
           </table>
@@ -806,13 +854,15 @@ function loadPage(page) {
   if (page === 'dashboard') loadDashboard();
   else if (page === 'users') loadUsers();
   else if (page === 'log') loadLog();
+  else if (page === 'upgrades') loadUpgrades();
   else if (page === 'system') loadSystem();
 }
 
 /* ── App Init ─────────────────────────────────────────────── */
 function initApp() {
   loadDashboard();
-  loadSystem(); // for uptime in topbar
+  loadSystem();
+  loadUpgrades(); // for nav badge count
 }
 
 /* ── Dashboard ─────────────────────────────────────────────── */
@@ -825,6 +875,11 @@ async function loadDashboard() {
     document.getElementById('statNewToday').textContent = stats.newToday;
     document.getElementById('statNewWeek').textContent  = stats.newWeek;
     document.getElementById('statActive7d').textContent = stats.active7d;
+    if (stats.pendingUpgrades > 0) {
+      const badge = document.getElementById('navUpgradeBadge');
+      badge.textContent = stats.pendingUpgrades;
+      badge.style.display = 'inline';
+    }
   } catch (e) {
     showToast('Statistika yuklanmadi: ' + e.message, 'error');
   }
@@ -1022,6 +1077,76 @@ async function loadLog() {
     tbody.innerHTML = `<tr class="loading-row"><td colspan="5">Xato: ${escape(e.message)}</td></tr>`;
     showToast('Log yuklanmadi', 'error');
   }
+}
+
+/* ── Upgrade Requests ──────────────────────────────────── */
+document.getElementById('upgradesRefreshBtn')?.addEventListener('click', loadUpgrades);
+
+async function loadUpgrades() {
+  const tbody = document.getElementById('upgradesBody');
+  if (tbody) tbody.innerHTML = '<tr class="loading-row"><td colspan="5">Yuklanmoqda...</td></tr>';
+  try {
+    const rows = await api('GET', '/admin/api/upgrade-requests');
+
+    const pending = rows.filter(r => r.status === 'pending').length;
+    const badge = document.getElementById('navUpgradeBadge');
+    if (badge) {
+      badge.textContent = pending;
+      badge.style.display = pending > 0 ? 'inline' : 'none';
+    }
+
+    if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:40px;">So\'rov yo\'q</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `
+      <tr id="upreq-${r.id}">
+        <td><span class="user-email">${escape(r.email || '—')}</span></td>
+        <td><span style="color:var(--text3);font-size:12px;">${escape(r.name || '—')}</span></td>
+        <td>
+          <span class="badge ${r.status === 'pending' ? 'badge-free' : 'badge-premium'}" style="${r.status === 'pending' ? 'color:#f59e0b;border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.1)' : ''}">
+            ${r.status === 'pending' ? '⏳ Kutmoqda' : r.is_premium ? '✅ Premium berilgan' : '✓ Bajarildi'}
+          </span>
+        </td>
+        <td>${relTime(r.created_at)}</td>
+        <td>
+          <div class="actions-cell">
+            ${r.status === 'pending' ? `
+              <button class="btn-sm btn-toggle-premium" onclick="giveUpgradePremium(${r.user_id}, ${r.id})" title="Premium berish">
+                ⚡ Premium berish
+              </button>
+              <button class="btn-sm" style="background:rgba(100,116,139,0.1);color:var(--text3);border:1px solid var(--border);"
+                onclick="markUpgradeDone(${r.id})" title="So'rovni yopish">
+                Yopish
+              </button>
+            ` : '<span style="color:var(--text3);font-size:12px;">Bajarilgan</span>'}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    if (tbody) tbody.innerHTML = `<tr class="loading-row"><td colspan="5">Xato: ${escape(e.message)}</td></tr>`;
+    showToast('So\'rovlar yuklanmadi', 'error');
+  }
+}
+
+async function giveUpgradePremium(userId, reqId) {
+  try {
+    await api('PATCH', `/admin/api/users/${userId}/premium`);
+    await api('PATCH', `/admin/api/upgrade-requests/${reqId}/done`);
+    showToast('⚡ Premium berildi va so\'rov yopildi', 'success');
+    loadUpgrades();
+    loadDashboard();
+  } catch (e) { showToast('Xato: ' + e.message, 'error'); }
+}
+
+async function markUpgradeDone(reqId) {
+  try {
+    await api('PATCH', `/admin/api/upgrade-requests/${reqId}/done`);
+    showToast("So'rov yopildi", 'success');
+    loadUpgrades();
+  } catch (e) { showToast('Xato: ' + e.message, 'error'); }
 }
 
 /* ── System ─────────────────────────────────────────────── */
