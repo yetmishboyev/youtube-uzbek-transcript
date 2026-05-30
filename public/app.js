@@ -288,6 +288,7 @@ function streamTranscript(url) {
       const realCount = segments.filter(Boolean).length;
       segmentCount.textContent = `${realCount} segment`;
       showToast('Transkript tayyor!');
+      onTranscriptDone(realCount);
     }
 
     if (msg.type === 'rate_limit') {
@@ -648,6 +649,7 @@ async function initAuth() {
       document.getElementById('emailLoginForm').style.display = 'none';
       document.querySelector('.landing-tiers').style.display = 'flex';
       loadUsage();
+      loadPublicStats();
       return;
     }
     showApp(data);  // loadUsage() is called inside showApp
@@ -690,16 +692,18 @@ function showApp(data) {
   urlInput.focus();
 }
 
-// Email login
-async function emailLogin(email) {
+// Email + OTP login
+let pendingOtpEmail = '';
+
+async function sendOtp(email) {
   const btn = document.getElementById('emailLoginBtn');
   const errEl = document.getElementById('emailLoginError');
   btn.disabled = true;
-  btn.textContent = 'Kirilmoqda...';
+  btn.textContent = 'Yuborilmoqda...';
   errEl.textContent = '';
 
   try {
-    const res = await fetch('/auth/email', {
+    const res = await fetch('/auth/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -708,29 +712,89 @@ async function emailLogin(email) {
     if (!res.ok) {
       errEl.textContent = data.error || 'Xato yuz berdi';
       btn.disabled = false;
-      btn.textContent = 'Kirish';
+      btn.textContent = 'Davom etish →';
+      return;
+    }
+    if (data.skipOtp) {
+      // OTP sozlanmagan — to'g'ridan-to'g'ri kirish
+      const me = await (await fetch('/api/me')).json();
+      if (me.loggedIn) showApp(me);
+      return;
+    }
+    // OTP kodi yuborildi — 2-qadam ko'rsat
+    pendingOtpEmail = email;
+    document.getElementById('loginStep1').style.display = 'none';
+    document.getElementById('loginStep2').style.display = 'block';
+    document.getElementById('otpHint').textContent = `${email} ga 6 xonali kod yuborildi`;
+    setTimeout(() => document.getElementById('otpInput').focus(), 50);
+  } catch {
+    errEl.textContent = 'Server bilan ulanishda xato';
+    btn.disabled = false;
+    btn.textContent = 'Davom etish →';
+  }
+}
+
+async function verifyOtp(code) {
+  const btn = document.getElementById('otpVerifyBtn');
+  const errEl = document.getElementById('otpError');
+  btn.disabled = true;
+  btn.textContent = 'Tekshirilmoqda...';
+  errEl.textContent = '';
+
+  try {
+    const res = await fetch('/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: pendingOtpEmail, code }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || "Kod noto'g'ri";
+      btn.disabled = false;
+      btn.textContent = 'Kirish ✓';
       return;
     }
     const me = await (await fetch('/api/me')).json();
     if (me.loggedIn) showApp(me);
-    else { errEl.textContent = 'Kirish amalga oshmadi'; btn.disabled = false; btn.textContent = 'Kirish'; }
+    else { errEl.textContent = 'Kirish amalga oshmadi'; btn.disabled = false; btn.textContent = 'Kirish ✓'; }
   } catch {
     errEl.textContent = 'Server bilan ulanishda xato';
     btn.disabled = false;
-    btn.textContent = 'Kirish';
+    btn.textContent = 'Kirish ✓';
   }
 }
 
 document.getElementById('emailLoginBtn').addEventListener('click', () => {
   const email = document.getElementById('emailInput').value.trim();
-  if (email) emailLogin(email);
+  if (email) sendOtp(email);
 });
 
 document.getElementById('emailInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     const email = e.target.value.trim();
-    if (email) emailLogin(email);
+    if (email) sendOtp(email);
   }
+});
+
+document.getElementById('otpVerifyBtn')?.addEventListener('click', () => {
+  const code = document.getElementById('otpInput').value.trim();
+  if (code.length === 6) verifyOtp(code);
+});
+
+document.getElementById('otpInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const code = e.target.value.trim();
+    if (code.length === 6) verifyOtp(code);
+  }
+});
+
+document.getElementById('backToEmailBtn')?.addEventListener('click', () => {
+  document.getElementById('loginStep2').style.display = 'none';
+  document.getElementById('loginStep1').style.display = 'block';
+  const btn = document.getElementById('emailLoginBtn');
+  btn.disabled = false;
+  btn.textContent = 'Davom etish →';
+  document.getElementById('emailLoginError').textContent = '';
 });
 
 document.getElementById('headerLoginBtn')?.addEventListener('click', () => {
@@ -915,6 +979,171 @@ async function generatePost(platform) {
 }
 
 /* ============================================================
+   Mobile tabs
+   ============================================================ */
+const isMobile = () => window.innerWidth <= 640;
+
+function initMobileTabs() {
+  const tabs = document.getElementById('mobileTabs');
+  if (!tabs) return;
+  tabs.style.display = isMobile() ? 'flex' : 'none';
+}
+
+document.querySelectorAll('.mobile-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.mobile-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    const ws = document.getElementById('workspace');
+    if (tab === 'video') {
+      ws.classList.remove('mobile-transcript');
+      ws.classList.add('mobile-video');
+    } else {
+      ws.classList.remove('mobile-video');
+      ws.classList.add('mobile-transcript');
+    }
+  });
+});
+
+window.addEventListener('resize', () => {
+  const tabs = document.getElementById('mobileTabs');
+  if (tabs) tabs.style.display = isMobile() ? 'flex' : 'none';
+  if (!isMobile()) {
+    const ws = document.getElementById('workspace');
+    ws.classList.remove('mobile-video', 'mobile-transcript');
+  }
+});
+
+/* ============================================================
+   Transcript tarixi
+   ============================================================ */
+let historyCache = null;
+
+async function saveTranscriptHistory(count) {
+  if (!currentUser || !videoId || !lastUrl) return;
+  try {
+    await fetch('/api/transcripts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        videoId,
+        videoUrl: lastUrl,
+        title: videoTitle.textContent || '',
+        segmentCount: count,
+      }),
+    });
+    historyCache = null; // Keshni tozala
+  } catch {}
+}
+
+async function loadHistory() {
+  if (!currentUser) return [];
+  if (historyCache) return historyCache;
+  try {
+    const res = await fetch('/api/transcripts');
+    historyCache = await res.json();
+    return historyCache;
+  } catch { return []; }
+}
+
+function relTimeShort(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'hozirgina';
+  if (m < 60) return `${m} daqiqa oldin`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} soat oldin`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d} kun oldin`;
+  return new Date(dateStr).toLocaleDateString('uz-UZ');
+}
+
+// Tarixi modal
+document.getElementById('historyBtn')?.addEventListener('click', async () => {
+  document.getElementById('historyModal').style.display = 'flex';
+  const list = document.getElementById('historyList');
+  list.innerHTML = '<div class="history-loading">Yuklanmoqda...</div>';
+  const items = await loadHistory();
+  if (!items.length) {
+    list.innerHTML = '<div class="history-empty"><div class="history-empty-icon">📭</div>Hali transkript yo\'q</div>';
+    return;
+  }
+  list.innerHTML = items.map(item => `
+    <div class="history-item" data-url="${escHtml(item.video_url)}" data-id="${escHtml(item.video_id)}">
+      <div class="history-thumb">
+        <img src="https://img.youtube.com/vi/${escHtml(item.video_id)}/default.jpg" alt="" loading="lazy"
+          onerror="this.parentElement.innerHTML='▶'" />
+      </div>
+      <div class="history-info">
+        <div class="history-title">${escHtml(item.title || item.video_id)}</div>
+        <div class="history-meta">${item.segment_count ? item.segment_count + ' segment · ' : ''}${relTimeShort(item.created_at)}</div>
+      </div>
+      <button class="history-reload" onclick="loadFromHistory('${escHtml(item.video_url || item.video_id)}')">
+        Yuklash ▶
+      </button>
+    </div>
+  `).join('');
+});
+
+document.getElementById('historyModalClose')?.addEventListener('click', () => {
+  document.getElementById('historyModal').style.display = 'none';
+});
+
+document.getElementById('historyModal')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('historyModal'))
+    document.getElementById('historyModal').style.display = 'none';
+});
+
+function loadFromHistory(url) {
+  document.getElementById('historyModal').style.display = 'none';
+  urlInput.value = url;
+  clearBtn.classList.add('visible');
+  load();
+}
+
+/* ============================================================
+   Upsell banner (bepul foydalanuvchilar uchun)
+   ============================================================ */
+document.getElementById('upsellUpgradeBtn')?.addEventListener('click', openUpgradeModal);
+document.getElementById('upsellClose')?.addEventListener('click', () => {
+  document.getElementById('upsellBanner').classList.remove('visible');
+});
+
+function showUpsellIfNeeded() {
+  if (currentUser && !currentUser.isPremium) {
+    const banner = document.getElementById('upsellBanner');
+    if (banner) banner.classList.add('visible');
+  }
+}
+
+/* ============================================================
+   onTranscriptDone — tarjima tugagandan keyin
+   ============================================================ */
+function onTranscriptDone(count) {
+  saveTranscriptHistory(count);
+  showUpsellIfNeeded();
+  initMobileTabs();
+}
+
+/* ============================================================
+   Social proof counter
+   ============================================================ */
+async function loadPublicStats() {
+  try {
+    const res = await fetch('/api/public-stats');
+    const data = await res.json();
+    const bar = document.getElementById('socialProofBar');
+    const vids = document.getElementById('proofVideos');
+    const users = document.getElementById('proofUsers');
+    if (bar && vids && users && (data.videosTranslated > 0 || data.totalUsers > 0)) {
+      vids.textContent = data.videosTranslated.toLocaleString();
+      users.textContent = data.totalUsers.toLocaleString();
+      bar.style.display = 'inline-block';
+    }
+  } catch {}
+}
+
+/* ============================================================
    Welcome Screen — Tier-specific content
    ============================================================ */
 function renderWelcomeScreen(tier) {
@@ -971,6 +1200,7 @@ function renderWelcomeScreen(tier) {
         </div>
         <div class="wt-bar-track"><div class="wt-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
       </div>
+      <div id="wtHistorySection"></div>
       <div class="wt-upgrade-card">
         <div class="wt-upgrade-hd">⚡ Premium'ga o'ting</div>
         <ul class="wt-upgrade-ul">
@@ -1011,11 +1241,40 @@ function renderWelcomeScreen(tier) {
         <div class="wt-feat">🎬 Real vaqt subtitlar</div>
         <div class="wt-feat">🌐 Har qanday tildan</div>
       </div>
+      <div id="wtHistorySection"></div>
       <p class="wt-tip">💡 Yuqoriga YouTube havolasini kiriting va tarjimani boshlang</p>
     </div>`;
   }
 
   el.innerHTML = html;
+
+  // Async: fill in last 3 history items for logged-in tiers
+  if (tier === 'free' || tier === 'premium') {
+    (async () => {
+      const items = await loadHistory();
+      const section = document.getElementById('wtHistorySection');
+      if (!section || !items.length) return;
+      const last3 = items.slice(0, 3);
+      section.innerHTML = `
+        <div class="wt-history">
+          <div class="wt-history-title">So'nggi transkriptlar</div>
+          ${last3.map(item => `
+            <div class="wt-history-item" onclick="loadFromHistory('${escHtml(item.video_url || item.video_id)}')">
+              <div class="wt-history-icon">▶</div>
+              <div class="wt-history-text">
+                <div class="wt-history-name">${escHtml(item.title || item.video_id)}</div>
+                <div class="wt-history-date">${relTimeShort(item.created_at)}</div>
+              </div>
+            </div>
+          `).join('')}
+          ${items.length > 3 ? `<button class="wt-history-more" id="wtHistoryMoreBtn">Ko'proq ko'rish (${items.length}) →</button>` : ''}
+        </div>
+      `;
+      document.getElementById('wtHistoryMoreBtn')?.addEventListener('click', () => {
+        document.getElementById('historyBtn')?.click();
+      });
+    })();
+  }
 
   document.getElementById('welcomeRegisterBtn')?.addEventListener('click', () => {
     document.getElementById('appContainer').style.display = 'none';

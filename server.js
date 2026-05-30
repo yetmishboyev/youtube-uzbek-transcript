@@ -3,6 +3,7 @@ const express = require('express');
 const { YoutubeTranscript } = require('youtube-transcript');
 const axios = require('axios');
 const Anthropic = require('@anthropic-ai/sdk');
+const nodemailer = require('nodemailer');
 const path = require('path');
 const { execFile, spawn } = require('child_process');
 const fs = require('fs');
@@ -21,6 +22,40 @@ const PYTHON_BIN  = '/Library/Frameworks/Python.framework/Versions/3.10/bin/pyth
 const anthropic = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your_api_key_here'
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
+
+// Nodemailer (Gmail SMTP)
+const mailer = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+    })
+  : null;
+
+async function sendOtpEmail(toEmail, code) {
+  if (!mailer) return false;
+  try {
+    await mailer.sendMail({
+      from: `"Grgitton" <${process.env.GMAIL_USER}>`,
+      to: toEmail,
+      subject: `${code} — Grgitton kirish kodi`,
+      html: `
+        <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:32px;background:#0f0f0f;color:#fff;border-radius:12px">
+          <h2 style="margin:0 0 8px;font-size:22px">Grgitton</h2>
+          <p style="color:#aaa;margin:0 0 28px;font-size:14px">YouTube O'zbek Transkript</p>
+          <p style="margin:0 0 12px;font-size:15px">Kirish uchun kod:</p>
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;text-align:center;letter-spacing:12px;font-size:36px;font-weight:800;color:#ff0000">
+            ${code}
+          </div>
+          <p style="color:#666;font-size:12px;margin:20px 0 0">Kod 10 daqiqa ichida amal qiladi. Agar siz yubormagansiz — e'tibor bermang.</p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (err) {
+    console.error('Email yuborishda xato:', err.message);
+    return false;
+  }
+}
 
 // PostgreSQL pool
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -51,25 +86,70 @@ async function loadUser(req, res, next) {
 app.use(loadUser);
 
 /* ─── Auth routes ──────────────────────────────────────────────── */
-app.post('/auth/email', async (req, res) => {
+
+// Step 1: Email jo'natish — OTP bor bo'lsa email ga, yo'q bo'lsa to'g'ri login
+app.post('/auth/send-otp', async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email))
     return res.status(400).json({ error: "To'g'ri email kiriting" });
 
+  if (!mailer) {
+    // OTP tizimi sozlanmagan — to'g'ridan-to'g'ri login
+    try {
+      const name = (email.split('@')[0] || 'user').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 50) || 'user';
+      const { rows } = await pool.query(
+        `INSERT INTO users (email, name) VALUES ($1, $2)
+         ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name RETURNING *`,
+        [email, name]
+      );
+      req.session.userId = rows[0].id;
+      return res.json({ ok: true, skipOtp: true });
+    } catch { return res.status(500).json({ error: 'Server xato' }); }
+  }
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const expires = new Date(Date.now() + 10 * 60 * 1000);
   try {
-    const name = (email.split('@')[0] || 'user').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 50) || 'user';
+    await pool.query(
+      `INSERT INTO otp_codes (email, code, expires_at) VALUES ($1, $2, $3)`,
+      [email, code, expires]
+    );
+    const sent = await sendOtpEmail(email, code);
+    if (!sent) return res.status(500).json({ error: "Email yuborishda xato. Gmail sozlamalarini tekshiring." });
+    res.json({ ok: true, skipOtp: false });
+  } catch { res.status(500).json({ error: 'Server xato' }); }
+});
+
+// Step 2: OTP tekshirish
+app.post('/auth/verify-otp', async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  const code  = (req.body.code  || '').trim();
+  if (!email || !code) return res.status(400).json({ error: "Email va kod kerak" });
+
+  try {
     const { rows } = await pool.query(
-      `INSERT INTO users (email, name)
-       VALUES ($1, $2)
-       ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name
-       RETURNING *`,
+      `SELECT * FROM otp_codes WHERE email=$1 AND code=$2 AND used=FALSE AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [email, code]
+    );
+    if (!rows.length) return res.status(400).json({ error: "Kod noto'g'ri yoki muddati o'tgan" });
+
+    await pool.query(`UPDATE otp_codes SET used=TRUE WHERE id=$1`, [rows[0].id]);
+    const name = (email.split('@')[0] || 'user').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 50) || 'user';
+    const { rows: userRows } = await pool.query(
+      `INSERT INTO users (email, name) VALUES ($1, $2)
+       ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name RETURNING *`,
       [email, name]
     );
-    req.session.userId = rows[0].id;
+    req.session.userId = userRows[0].id;
     res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: 'Server xato' });
-  }
+  } catch { res.status(500).json({ error: 'Server xato' }); }
+});
+
+// Eski endpoint — orqaga mos
+app.post('/auth/email', async (req, res) => {
+  req.url = '/auth/send-otp';
+  app._router.handle(req, res);
 });
 
 app.post('/auth/logout', (req, res) => {
@@ -288,7 +368,7 @@ app.get('/admin/api/system', requireAdmin, async (req, res) => {
 
 /* ─── Rate Limiting ────────────────────────────────────────────── */
 const LIMITS = {
-  transcript: { anonymous: { daily: 2, perMin: 1 }, free: { daily: 5, perMin: 2 }, premium: { daily: 50, perMin: 10 } },
+  transcript: { anonymous: { daily: 5, perMin: 2 }, free: { daily: 15, perMin: 3 }, premium: { daily: 50, perMin: 10 } },
   post:       { premium:   { daily: 20 } },
 };
 
@@ -820,6 +900,50 @@ app.get('/api/usage', async (req, res) => {
   }
 });
 
+/* ─── Public statistika (landing social proof) ─────────────────── */
+app.get('/api/public-stats', async (req, res) => {
+  try {
+    const [vids, users] = await Promise.all([
+      pool.query(`SELECT COUNT(*) FROM api_logs WHERE endpoint='transcript'`),
+      pool.query(`SELECT COUNT(*) FROM users`),
+    ]);
+    res.json({
+      videosTranslated: parseInt(vids.rows[0].count),
+      totalUsers: parseInt(users.rows[0].count),
+    });
+  } catch { res.json({ videosTranslated: 0, totalUsers: 0 }); }
+});
+
+/* ─── Transcript tarixi ─────────────────────────────────────────── */
+app.post('/api/transcripts', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Login kerak' });
+  const { videoId, videoUrl, title, segmentCount } = req.body;
+  if (!videoId) return res.status(400).json({ error: 'videoId kerak' });
+  try {
+    await pool.query(
+      `INSERT INTO transcripts (user_id, video_id, video_url, title, segment_count)
+       VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (user_id, video_id)
+       DO UPDATE SET title=EXCLUDED.title, segment_count=EXCLUDED.segment_count, created_at=NOW()`,
+      [req.user.id, videoId, videoUrl || '', title || '', segmentCount || 0]
+    );
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: 'Server xato' }); }
+});
+
+app.get('/api/transcripts', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Login kerak' });
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, video_id, video_url, title, segment_count, created_at
+       FROM transcripts WHERE user_id=$1
+       ORDER BY created_at DESC LIMIT 20`,
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch { res.status(500).json({ error: 'Server xato' }); }
+});
+
 /* ─── API holati ───────────────────────────────────────────────── */
 app.get('/api/status', (req, res) => {
   res.json({
@@ -856,6 +980,31 @@ app.listen(PORT, async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS otp_codes (
+        id         SERIAL PRIMARY KEY,
+        email      VARCHAR(255) NOT NULL,
+        code       VARCHAR(6) NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used       BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS transcripts (
+        id             SERIAL PRIMARY KEY,
+        user_id        INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        video_id       VARCHAR(20) NOT NULL,
+        video_url      TEXT DEFAULT '',
+        title          VARCHAR(500) DEFAULT '',
+        segment_count  INTEGER DEFAULT 0,
+        created_at     TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id, video_id)
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_transcripts_user ON transcripts(user_id, created_at DESC)`);
+    await pool.query(`-- otp cleanup: eski kodlarni o'chirish (startup da bir marta) -- SELECT 1`);
+    pool.query(`DELETE FROM otp_codes WHERE expires_at < NOW() - INTERVAL '1 day'`).catch(() => {});
     console.log(`🗄️  PostgreSQL: ulandi\n`);
   } catch (e) {
     console.error(`❌ PostgreSQL ulanmadi: ${e.message}\n`);

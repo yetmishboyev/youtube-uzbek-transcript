@@ -3,8 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YouTube O'zbek Transkript</title>
+  <title>Grgitton — YouTube O'zbek Transkript | AI Tarjima</title>
+  <meta name="description" content="YouTube videolarini real vaqtda o'zbek tiliga tarjima qiling. Grgitton AI bilan subtitrlar, transkript va ijtimoiy tarmoq postlari." />
+  <meta name="keywords" content="youtube uzbek, o'zbek transkript, youtube tarjima, uzbekcha subtitrs, grgitton" />
+  <meta property="og:title" content="Grgitton — YouTube O'zbek Transkript" />
+  <meta property="og:description" content="YouTube videolarini real vaqtda o'zbek tiliga tarjima qiling. AI subtitrlar va transkript." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Grgitton — YouTube O'zbek Transkript" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
 </head>
 <body>
 
@@ -27,6 +42,12 @@
         </div>
         <!-- login bo'lgan holat -->
         <div id="headerUser" style="display:none" class="header-user-area">
+          <button class="btn-history" id="historyBtn" title="Transkript tarixi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+              <polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/>
+            </svg>
+            Tarixi
+          </button>
           <button class="btn-upgrade" id="upgradeBtn">⚡ Premium</button>
           <div class="user-menu" id="userMenu">
             <div id="userAvatar" class="user-avatar" role="button" tabindex="0"></div>
@@ -46,6 +67,12 @@
   <div id="landingPage" style="display:none">
     <div class="landing-hero">
 
+      <!-- Social proof -->
+      <div class="social-proof-bar" id="socialProofBar" style="display:none">
+        <span id="proofVideos">—</span> ta video tarjima qilindi &bull;
+        <span id="proofUsers">—</span> ta foydalanuvchi
+      </div>
+
       <!-- Hero -->
       <div class="landing-icon">
         <svg width="90" height="64" viewBox="0 0 90 64" fill="none">
@@ -56,7 +83,7 @@
       </div>
       <h1>YouTube O'zbek Transkript</h1>
       <p>YouTube videolarini real vaqtda o'zbek tiliga tarjima qiling.<br/>
-         Subtitrlar bilan birga video tomosha qiling.</p>
+         <strong style="color:var(--text)">Grgitton AI</strong> — O'zbekiston uchun yaratilgan sun'iy intellekt tarjimon.</p>
 
       <!-- Xususiyatlar -->
       <div class="landing-features">
@@ -143,11 +170,24 @@
 
       <!-- Login formasi -->
       <div class="email-login-form" id="emailLoginForm" style="display:none">
-        <p class="login-form-title" id="loginFormTitle">Bepul ro'yxatdan o'ting</p>
-        <input type="email" id="emailInput" class="email-input" placeholder="email@gmail.com" autocomplete="email" />
-        <button class="btn-email-login" id="emailLoginBtn">Kirish / Ro'yxatdan o'tish</button>
-        <div class="email-login-error" id="emailLoginError"></div>
-        <button class="btn-back-landing" id="backToTiersBtn">← Orqaga</button>
+        <!-- Qadam 1: email -->
+        <div id="loginStep1">
+          <p class="login-form-title" id="loginFormTitle">Bepul ro'yxatdan o'ting</p>
+          <input type="email" id="emailInput" class="email-input" placeholder="email@gmail.com" autocomplete="email" />
+          <button class="btn-email-login" id="emailLoginBtn">Davom etish →</button>
+          <div class="email-login-error" id="emailLoginError"></div>
+          <button class="btn-back-landing" id="backToTiersBtn">← Orqaga</button>
+        </div>
+        <!-- Qadam 2: OTP kodi -->
+        <div id="loginStep2" style="display:none">
+          <p class="login-form-title">Emailni tasdiqlang</p>
+          <p class="login-otp-hint" id="otpHint">Emailingizga 6 xonali kod yuborildi</p>
+          <input type="text" id="otpInput" class="email-input otp-input" placeholder="● ● ● ● ● ●"
+            maxlength="6" autocomplete="one-time-code" inputmode="numeric" />
+          <button class="btn-email-login" id="otpVerifyBtn">Kirish ✓</button>
+          <div class="email-login-error" id="otpError"></div>
+          <button class="btn-back-landing" id="backToEmailBtn">← Email ga qaytish</button>
+        </div>
       </div>
 
     </div>
@@ -182,6 +222,20 @@
         Masalan: <span class="hint-url">https://www.youtube.com/watch?v=dQw4w9WgXcQ</span>
       </div>
       <div class="usage-bar" id="usageBar" style="display:none"></div>
+    </div>
+
+    <!-- Mobile tab bar -->
+    <div class="mobile-tabs" id="mobileTabs" style="display:none">
+      <button class="mobile-tab active" id="tabVideo" data-tab="video">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7z"/></svg>
+        Video
+      </button>
+      <button class="mobile-tab" id="tabTranscript" data-tab="transcript">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/>
+        </svg>
+        Transkript
+      </button>
     </div>
 
     <!-- Main Split Layout -->
@@ -278,6 +332,15 @@
             </svg>
             <input type="text" id="searchInput" placeholder="Transkriptda qidiring..." />
             <span class="search-count" id="searchCount"></span>
+          </div>
+
+          <!-- Upsell banner (bepul foydalanuvchilar uchun) -->
+          <div class="upsell-banner" id="upsellBanner">
+            <div class="upsell-text">
+              <strong>Grgitton AI</strong> bilan tarjima aniqroq — Premium foydalanuvchilar uchun
+            </div>
+            <button class="upsell-btn" id="upsellUpgradeBtn">⚡ Premium — $5/oy</button>
+            <button class="upsell-close" id="upsellClose">✕</button>
           </div>
 
           <!-- Loading progress -->
@@ -428,6 +491,19 @@
       <div id="socialPostLoading" style="display:none" class="social-loading">
         <div class="social-spinner"></div>
         <span>Grgitton post yozmoqda...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="historyModal" class="modal-overlay" style="display:none">
+    <div class="modal history-modal">
+      <div class="history-modal-header">
+        <h2 class="modal-title" style="margin:0">📋 Transkript tarixi</h2>
+        <button class="modal-close" id="historyModalClose" style="position:static">✕</button>
+      </div>
+      <div id="historyList" class="history-list">
+        <div class="history-loading">Yuklanmoqda...</div>
       </div>
     </div>
   </div>
