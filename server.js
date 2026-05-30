@@ -963,6 +963,25 @@ app.listen(PORT, async () => {
   try {
     await pool.query('SELECT 1');
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id         SERIAL PRIMARY KEY,
+        email      VARCHAR(255) UNIQUE NOT NULL,
+        name       VARCHAR(255),
+        is_premium BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        last_seen  TIMESTAMPTZ
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        sid    VARCHAR NOT NULL COLLATE "default",
+        sess   JSON NOT NULL,
+        expire TIMESTAMP(6) NOT NULL,
+        CONSTRAINT session_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions(expire)`);
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS api_logs (
         id         SERIAL PRIMARY KEY,
         user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
