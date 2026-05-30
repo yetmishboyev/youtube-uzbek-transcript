@@ -637,12 +637,12 @@ function showApp(data) {
 
   const tierBanner = document.getElementById('tierBanner');
   if (data.isPremium) {
-    tierBanner.textContent = '⚡ Premium: Claude AI tarjima faol';
+    tierBanner.textContent = '⚡ Premium: Grgitton AI tarjima faol';
     tierBanner.style.borderColor = '#f59e0b';
     tierBanner.style.color = '#f59e0b';
     document.getElementById('sharePostBtn').style.display = 'flex';
   } else {
-    tierBanner.textContent = 'Bepul tarif: Google Translate ishlatilmoqda';
+    tierBanner.textContent = 'Bepul tarif: Grgitton tarjima faol';
     document.getElementById('sharePostBtn').style.display = 'none';
   }
 

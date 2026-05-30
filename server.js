@@ -453,7 +453,7 @@ async function translateAndStream(transcript, lang, send, needsTranslation, isCa
   }
 
   const useAI = usePremium && anthropic;
-  const engine = useAI ? 'Claude Haiku' : 'Google Translate';
+  const engine = useAI ? 'Grgitton' : 'Grgitton';
   send({ type: 'engine', engine });
 
   for (let i = 0; i < total; i += BATCH) {
@@ -512,7 +512,7 @@ app.get('/api/transcript', async (req, res) => {
     }
 
     /* ── 2. Whisper pipeline ── */
-    send({ type: 'status', message: "Subtitr topilmadi — Whisper AI boshlanmoqda..." });
+    send({ type: 'status', message: "Subtitr topilmadi — Grgitton AI boshlanmoqda..." });
     send({ type: 'whisper_mode' });
 
     const tmpPrefix = `yt-${videoId}`;
@@ -534,7 +534,7 @@ app.get('/api/transcript', async (req, res) => {
       return finish();
     }
 
-    send({ type: 'status', message: '🤖 Whisper AI transkriptsiya qilmoqda...' });
+    send({ type: 'status', message: '🤖 Grgitton transkriptsiya qilmoqda...' });
     let whisperResult;
     try {
       whisperResult = await runWhisper(path.join(os.tmpdir(), tmpFiles[0]), 'small');

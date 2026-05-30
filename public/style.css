@@ -465,6 +465,20 @@ html, body {
   align-items: center;
 }
 
+.share-post-btn {
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.15)) !important;
+  border-color: rgba(245,158,11,0.5) !important;
+  color: #f59e0b !important;
+  font-weight: 600 !important;
+}
+
+.share-post-btn:hover {
+  background: linear-gradient(135deg, rgba(245,158,11,0.25), rgba(239,68,68,0.25)) !important;
+  border-color: #f59e0b !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245,158,11,0.2);
+}
+
 /* ============================================================
    Buttons
    ============================================================ */
