@@ -582,6 +582,122 @@ app.get('/api/video-info', async (req, res) => {
   }
 });
 
+/* ─── Social post generator (Premium) ─────────────────────────── */
+app.post('/api/generate-post', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Login kerak' });
+  if (!req.user.is_premium) return res.status(403).json({ error: 'Bu funksiya faqat Premium foydalanuvchilar uchun' });
+  if (!anthropic) return res.status(503).json({ error: 'AI xizmati mavjud emas' });
+
+  const { url, platform } = req.body;
+  if (!url || !platform) return res.status(400).json({ error: 'URL va platform kerak' });
+
+  const videoId = extractVideoId(url);
+  if (!videoId) return res.status(400).json({ error: "Noto'g'ri YouTube URL" });
+
+  const platformPrompts = {
+    instagram: `Siz professional Instagram kontent yaratuvchisisiz. Quyidagi YouTube video uchun o'zbek tilida Instagram post yozing.
+Talablar:
+- Jozibali sarlavha va matn (2-3 qisqa paragraf)
+- 15-20 ta tegishli hashtag (#uzbek #uz va hokazo)
+- Emoji-lar qo'shing
+- "Bio linkga o'ting" yoki "Post saqlang" kabi call-to-action
+- Instagram auditoriyasiga mos: vizual, ilhomlantiruvchi, qisqa`,
+
+    telegram: `Siz professional Telegram kanal adminsiz. Quyidagi YouTube video uchun o'zbek tilida Telegram post yozing.
+Talablar:
+- Qiziqarli sarlavha (bold qiling: **sarlavha**)
+- Video haqida asosiy fikrlar (3-5 ta bullet point)
+- O'quvchini davom ettirishga undovchi matn
+- Telegram formatida: **bold**, __italic__, emoji-lar
+- Havolaga yo'naltirish: "Video: [havola]"
+- 300-500 so'z`,
+
+    facebook: `Siz professional Facebook SMM mutaxassisisiz. Quyidagi YouTube video uchun o'zbek tilida Facebook post yozing.
+Talablar:
+- Do'stona va samimiy ohang
+- Video haqida qiziqarli hikoya (3-4 paragraf)
+- Izoh qoldirishga undovchi savol
+- Emoji-lar
+- "Ulashing" va "Like" ga undash
+- 200-400 so'z`,
+
+    linkedin: `Siz professional LinkedIn kontent strategisiz. Quyidagi YouTube video uchun o'zbek tilida LinkedIn post yozing.
+Talablar:
+- Professional va kasbiy ohang
+- Video-dan 3-5 ta asosiy xulosa yoki ta'lim
+- Kasbiy rivojlanishga aloqador tushunchalar
+- Minimal emoji (faqat zarur hollarda)
+- Savol yoki fikr almashishga undash
+- 300-500 so'z`,
+
+    twitter: `Siz professional Twitter/X kontent mutaxassisisiz. Quyidagi YouTube video uchun o'zbek tilida Twitter/X thread yozing.
+Talablar:
+- 5-7 ta tweet-dan iborat thread
+- Har bir tweet 280 belgidan oshmasin
+- Birinchi tweet juda e'tiborli bo'lsin
+- Raqamlar bilan: 1/, 2/, 3/ ...
+- Tegishli hashtag-lar (2-3 ta)
+- Emoji-lar`,
+
+    youtube: `Siz professional YouTube kontent yaratuvchisisiz. Quyidagi YouTube video uchun o'zbek tilida YouTube Community post yozing.
+Talablar:
+- Yangi video e'lon qilish formatida
+- Videoning asosiy mavzusi va foydalari
+- Tomosha qilishga undash
+- Savollar va muhokama uchun izoh qoldiring
+- Emoji-lar
+- 150-300 so'z`,
+  };
+
+  const platformNames = {
+    instagram: 'Instagram', telegram: 'Telegram', facebook: 'Facebook',
+    linkedin: 'LinkedIn', twitter: 'Twitter/X', youtube: 'YouTube Community',
+  };
+
+  if (!platformPrompts[platform]) return res.status(400).json({ error: "Noto'g'ri platform" });
+
+  try {
+    // Video sarlavhasini ol
+    let videoTitle = '';
+    try {
+      const infoRes = await axios.get('https://noembed.com/embed',
+        { params: { url: `https://www.youtube.com/watch?v=${videoId}` }, timeout: 6000 });
+      videoTitle = infoRes.data?.title || '';
+    } catch {}
+
+    // Transkriptni ol
+    let transcriptText = '';
+    try {
+      const captions = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'uz' })
+        .catch(() => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' }))
+        .catch(() => YoutubeTranscript.fetchTranscript(videoId));
+      if (captions?.length) {
+        transcriptText = captions.map(c => decodeEntities(c.text)).join(' ').slice(0, 4000);
+      }
+    } catch {}
+
+    const videoInfo = [
+      videoTitle ? `Video sarlavhasi: "${videoTitle}"` : '',
+      `Video URL: https://www.youtube.com/watch?v=${videoId}`,
+      transcriptText ? `\nVideo mazmuni (transkript):\n${transcriptText}` : '\n[Transkript mavjud emas — sarlavha asosida yozing]',
+    ].filter(Boolean).join('\n');
+
+    const message = await anthropic.messages.create({
+      model: 'claude-opus-4-5',
+      max_tokens: 1500,
+      messages: [{
+        role: 'user',
+        content: `${platformPrompts[platform]}\n\n${videoInfo}\n\nFaqat post matnini yozing, boshqa izoh qo'shmang.`,
+      }],
+    });
+
+    res.json({ post: message.content[0].text, platform: platformNames[platform] });
+  } catch (err) {
+    console.error('generate-post error:', err);
+    res.status(500).json({ error: 'Post yaratishda xato: ' + err.message });
+  }
+});
+
 /* ─── API holati ───────────────────────────────────────────────── */
 app.get('/api/status', (req, res) => {
   res.json({

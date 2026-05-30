@@ -928,6 +928,118 @@ html, body {
 }
 
 /* ============================================================
+   Social Post Modal
+   ============================================================ */
+.social-modal {
+  max-width: 560px;
+  width: 95%;
+  text-align: left;
+  padding: 28px 28px 24px;
+}
+
+.social-modal-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.social-modal-icon { font-size: 32px; margin-bottom: 8px; }
+
+.social-modal-desc {
+  color: var(--text2);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.social-platforms {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.platform-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  transition: all 0.15s;
+}
+
+.platform-btn:hover { transform: translateY(-2px); border-color: var(--text2); }
+.platform-btn.loading { opacity: 0.5; pointer-events: none; }
+
+.platform-icon {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.instagram-icon { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); color: #fff; }
+.telegram-icon  { background: #2CA5E0; color: #fff; }
+.facebook-icon  { background: #1877F2; color: #fff; }
+.linkedin-icon  { background: #0A66C2; color: #fff; }
+.twitter-icon   { background: #000; color: #fff; }
+.youtube-icon   { background: #FF0000; color: #fff; }
+
+.post-result-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.post-platform-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+
+.post-result-text {
+  width: 100%;
+  min-height: 220px;
+  max-height: 340px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 14px;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.social-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 0;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.social-spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
    Fullscreen mode
    ============================================================ */
 #workspace:fullscreen {

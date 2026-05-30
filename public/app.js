@@ -640,8 +640,10 @@ function showApp(data) {
     tierBanner.textContent = '⚡ Premium: Claude AI tarjima faol';
     tierBanner.style.borderColor = '#f59e0b';
     tierBanner.style.color = '#f59e0b';
+    document.getElementById('sharePostBtn').style.display = 'flex';
   } else {
     tierBanner.textContent = 'Bepul tarif: Google Translate ishlatilmoqda';
+    document.getElementById('sharePostBtn').style.display = 'none';
   }
 
   urlInput.focus();
@@ -729,5 +731,76 @@ document.getElementById('upgradeModal').addEventListener('click', e => {
   if (e.target === document.getElementById('upgradeModal'))
     document.getElementById('upgradeModal').style.display = 'none';
 });
+
+/* ============================================================
+   Social Post Modal
+   ============================================================ */
+let lastGeneratedPlatform = null;
+
+document.getElementById('sharePostBtn').addEventListener('click', () => {
+  if (!lastUrl) { showToast("Avval video yuklang"); return; }
+  const modal = document.getElementById('socialPostModal');
+  document.getElementById('socialPostResult').style.display = 'none';
+  document.getElementById('socialPostLoading').style.display = 'none';
+  document.getElementById('socialPlatforms').style.display = 'grid';
+  modal.style.display = 'flex';
+});
+
+document.getElementById('socialModalClose').addEventListener('click', () => {
+  document.getElementById('socialPostModal').style.display = 'none';
+});
+
+document.getElementById('socialPostModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('socialPostModal'))
+    document.getElementById('socialPostModal').style.display = 'none';
+});
+
+document.getElementById('socialPlatforms').addEventListener('click', async e => {
+  const btn = e.target.closest('.platform-btn');
+  if (!btn) return;
+  const platform = btn.dataset.platform;
+  lastGeneratedPlatform = platform;
+  await generatePost(platform);
+});
+
+document.getElementById('copyPostBtn').addEventListener('click', () => {
+  const text = document.getElementById('postResultText').value;
+  navigator.clipboard.writeText(text).then(() => showToast('Nusxa olindi'));
+});
+
+document.getElementById('regeneratePostBtn').addEventListener('click', async () => {
+  if (lastGeneratedPlatform) await generatePost(lastGeneratedPlatform);
+});
+
+async function generatePost(platform) {
+  const platforms = document.getElementById('socialPlatforms');
+  const loading = document.getElementById('socialPostLoading');
+  const result = document.getElementById('socialPostResult');
+
+  platforms.style.display = 'none';
+  result.style.display = 'none';
+  loading.style.display = 'flex';
+
+  try {
+    const res = await fetch('/api/generate-post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: lastUrl, platform }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) { showToast(data.error || 'Xato'); platforms.style.display = 'grid'; loading.style.display = 'none'; return; }
+
+    document.getElementById('postPlatformName').textContent = '✨ ' + data.platform + ' uchun post';
+    document.getElementById('postResultText').value = data.post;
+    loading.style.display = 'none';
+    result.style.display = 'block';
+    platforms.style.display = 'grid';
+  } catch {
+    showToast('Tarmoq xatosi');
+    platforms.style.display = 'grid';
+    loading.style.display = 'none';
+  }
+}
 
 initAuth();
