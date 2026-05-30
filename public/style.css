@@ -465,6 +465,36 @@ html, body {
   align-items: center;
 }
 
+/* ─── Usage bar ───────────────────────────────────────────────── */
+.usage-bar {
+  padding: 6px 14px 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.usage-label {
+  font-size: 11px;
+  color: var(--text3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.usage-track {
+  flex: 1;
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 2px;
+  overflow: hidden;
+  max-width: 160px;
+}
+
+.usage-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
 .share-post-btn {
   background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.15)) !important;
   border-color: rgba(245,158,11,0.5) !important;

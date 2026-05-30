@@ -246,6 +246,48 @@ app.get('/admin/api/system', requireAdmin, async (req, res) => {
   } catch (e) { res.json({ db: 'error', error: e.message }); }
 });
 
+/* ─── Rate Limiting ────────────────────────────────────────────── */
+const LIMITS = {
+  transcript: { anonymous: { daily: 2, perMin: 1 }, free: { daily: 5, perMin: 2 }, premium: { daily: 50, perMin: 10 } },
+  post:       { premium:   { daily: 20 } },
+};
+
+function getClientIp(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || 'unknown';
+}
+
+async function checkRateLimit(req, endpoint) {
+  const userId = req.user?.id || null;
+  const ip     = getClientIp(req);
+  const tier   = !userId ? 'anonymous' : (req.user?.is_premium ? 'premium' : 'free');
+  const limits = LIMITS[endpoint]?.[tier];
+  if (!limits) return { allowed: false, reason: 'Bu amal sizning tarifingizda mavjud emas' };
+
+  const col    = userId ? 'user_id' : 'ip_address';
+  const val    = userId || ip;
+
+  const [dayRow, minRow] = await Promise.all([
+    pool.query(`SELECT COUNT(*) AS cnt FROM api_logs WHERE ${col}=$1 AND endpoint=$2 AND created_at > NOW() - INTERVAL '1 day'`,  [val, endpoint]),
+    limits.perMin
+      ? pool.query(`SELECT COUNT(*) AS cnt FROM api_logs WHERE ${col}=$1 AND endpoint=$2 AND created_at > NOW() - INTERVAL '1 minute'`, [val, endpoint])
+      : Promise.resolve({ rows: [{ cnt: 0 }] }),
+  ]);
+
+  const dailyUsed  = parseInt(dayRow.rows[0].cnt);
+  const minUsed    = parseInt(minRow.rows[0].cnt);
+
+  if (limits.perMin && minUsed >= limits.perMin) {
+    return { allowed: false, reason: `Bir daqiqada ${limits.perMin} ta so'rov mumkin. Biroz kuting.`, dailyUsed, dailyLimit: limits.daily };
+  }
+  if (dailyUsed >= limits.daily) {
+    const tierName = tier === 'anonymous' ? 'Tizimga kiring' : (tier === 'free' ? 'Premium oling' : '');
+    return { allowed: false, reason: `Kunlik limit: ${limits.daily} ta. Ertaga qayta urinib ko'ring.${tierName ? ' ' + tierName + ' — ko\'proq limit.' : ''}`, dailyUsed, dailyLimit: limits.daily };
+  }
+
+  await pool.query('INSERT INTO api_logs (user_id, ip_address, endpoint) VALUES ($1,$2,$3)', [userId, ip, endpoint]);
+  return { allowed: true, dailyUsed: dailyUsed + 1, dailyLimit: limits.daily };
+}
+
 /* ─── URL parsing ──────────────────────────────────────────────── */
 function extractVideoId(url) {
   url = (url || '').trim();
@@ -490,7 +532,15 @@ app.get('/api/transcript', async (req, res) => {
   const videoId = extractVideoId(url);
   if (!videoId) return res.status(400).json({ error: "Noto'g'ri YouTube URL" });
 
+  const rl = await checkRateLimit(req, 'transcript');
+  if (!rl.allowed) {
+    const { send: sendErr, finish: finishErr } = setupSSE(res);
+    sendErr({ type: 'rate_limit', message: rl.reason, dailyUsed: rl.dailyUsed, dailyLimit: rl.dailyLimit });
+    return finishErr();
+  }
+
   const { send, finish } = setupSSE(res);
+  send({ type: 'usage', dailyUsed: rl.dailyUsed, dailyLimit: rl.dailyLimit });
 
   let cancelled = false;
   req.on('close', () => { cancelled = true; });
@@ -590,6 +640,9 @@ app.post('/api/generate-post', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Login kerak' });
   if (!req.user.is_premium) return res.status(403).json({ error: 'Bu funksiya faqat Premium foydalanuvchilar uchun' });
   if (!anthropic) return res.status(503).json({ error: 'AI xizmati mavjud emas' });
+
+  const rl = await checkRateLimit(req, 'post');
+  if (!rl.allowed) return res.status(429).json({ error: rl.reason, dailyUsed: rl.dailyUsed, dailyLimit: rl.dailyLimit });
 
   const { url, platform } = req.body;
   if (!url || !platform) return res.status(400).json({ error: 'URL va platform kerak' });
@@ -701,6 +754,32 @@ Talablar:
   }
 });
 
+/* ─── Foydalanuvchi kunlik sarfi ──────────────────────────────── */
+app.get('/api/usage', async (req, res) => {
+  const userId = req.user?.id || null;
+  const ip     = getClientIp(req);
+  const tier   = !userId ? 'anonymous' : (req.user?.is_premium ? 'premium' : 'free');
+  const col    = userId ? 'user_id' : 'ip_address';
+  const val    = userId || ip;
+
+  try {
+    const [tRow, pRow] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS cnt FROM api_logs WHERE ${col}=$1 AND endpoint='transcript' AND created_at > NOW() - INTERVAL '1 day'`, [val]),
+      pool.query(`SELECT COUNT(*) AS cnt FROM api_logs WHERE ${col}=$1 AND endpoint='post'       AND created_at > NOW() - INTERVAL '1 day'`, [val]),
+    ]);
+    const tLimits = LIMITS.transcript[tier] || LIMITS.transcript.anonymous;
+    const pLimits = LIMITS.post[tier] || null;
+
+    res.json({
+      tier,
+      transcript: { used: parseInt(tRow.rows[0].cnt), limit: tLimits.daily },
+      post: pLimits ? { used: parseInt(pRow.rows[0].cnt), limit: pLimits.daily } : null,
+    });
+  } catch {
+    res.json({ tier, transcript: { used: 0, limit: LIMITS.transcript[tier]?.daily || 2 }, post: null });
+  }
+});
+
 /* ─── API holati ───────────────────────────────────────────────── */
 app.get('/api/status', (req, res) => {
   res.json({
@@ -717,6 +796,17 @@ app.listen(PORT, async () => {
   console.log(`${engine}: tarjima`);
   try {
     await pool.query('SELECT 1');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS api_logs (
+        id         SERIAL PRIMARY KEY,
+        user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        ip_address VARCHAR(45),
+        endpoint   VARCHAR(30) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_logs_user   ON api_logs(user_id, endpoint, created_at)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_logs_ip     ON api_logs(ip_address, endpoint, created_at)`);
     console.log(`🗄️  PostgreSQL: ulandi\n`);
   } catch (e) {
     console.error(`❌ PostgreSQL ulanmadi: ${e.message}\n`);

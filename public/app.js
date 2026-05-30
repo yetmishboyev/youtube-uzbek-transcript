@@ -289,6 +289,20 @@ function streamTranscript(url) {
       showToast('Transkript tayyor!');
     }
 
+    if (msg.type === 'rate_limit') {
+      evtSource.close();
+      currentEvtSource = null;
+      isLoading = false;
+      setLoadingState(false);
+      loadingBar.style.display = 'none';
+      showError(msg.message);
+      updateUsageBar(msg.dailyUsed, msg.dailyLimit);
+    }
+
+    if (msg.type === 'usage') {
+      updateUsageBar(msg.dailyUsed, msg.dailyLimit);
+    }
+
     if (msg.type === 'error') {
       evtSource.close();
       currentEvtSource = null;
@@ -507,6 +521,26 @@ function formatTime(sec) {
   return `${m}:${String(s).padStart(2,'0')}`;
 }
 
+function updateUsageBar(used, limit) {
+  const el = document.getElementById('usageBar');
+  if (!el || !limit) return;
+  const pct = Math.min(100, Math.round((used / limit) * 100));
+  const color = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#22c55e';
+  el.innerHTML = `
+    <span class="usage-label">Bugungi so'rovlar: ${used}/${limit}</span>
+    <div class="usage-track"><div class="usage-fill" style="width:${pct}%;background:${color}"></div></div>
+  `;
+  el.style.display = 'flex';
+}
+
+async function loadUsage() {
+  try {
+    const res = await fetch('/api/usage');
+    const data = await res.json();
+    if (data.transcript) updateUsageBar(data.transcript.used, data.transcript.limit);
+  } catch {}
+}
+
 function escHtml(str) {
   return (str || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -603,9 +637,11 @@ async function initAuth() {
       document.getElementById('landingPage').style.display = 'block';
       document.getElementById('appContainer').style.display = 'none';
       document.getElementById('headerGuest').style.display = 'flex';
+      loadUsage();
       return;
     }
     showApp(data);
+    loadUsage();
   } catch {
     // Server yetib bormasa landing ko'rsat
     document.getElementById('landingPage').style.display = 'block';
