@@ -562,7 +562,6 @@ muteBtn.addEventListener('click', () => {
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const fsIconExpand = document.getElementById('fsIconExpand');
 const fsIconCollapse = document.getElementById('fsIconCollapse');
-const workspace = document.getElementById('workspace');
 
 fullscreenBtn.addEventListener('click', () => {
   if (!document.fullscreenElement) {
