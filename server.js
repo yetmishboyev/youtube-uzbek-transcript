@@ -26,13 +26,16 @@ const anthropic = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 /* ─── Session ──────────────────────────────────────────────────── */
+if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'fallback-secret') {
+  console.warn('⚠️  SESSION_SECRET .env da o\'rnatilmagan — ishlab chiqarish uchun majburiy!');
+}
 app.use(express.json());
 app.use(session({
   store: new pgSession({ pool, tableName: 'sessions' }),
-  secret: process.env.SESSION_SECRET || 'fallback-secret',
+  secret: process.env.SESSION_SECRET || 'grgitton-dev-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
+  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000, secure: process.env.NODE_ENV === 'production' },
 }));
 
 /* ─── Auth middleware ──────────────────────────────────────────── */
@@ -701,16 +704,16 @@ Talablar:
 /* ─── API holati ───────────────────────────────────────────────── */
 app.get('/api/status', (req, res) => {
   res.json({
-    translation: anthropic ? 'claude-haiku' : 'google-translate',
+    translation: anthropic ? 'grgitton-ai' : 'grgitton-basic',
     whisper: 'small',
   });
 });
 
 app.listen(PORT, async () => {
-  const engine = anthropic ? '✨ Claude Haiku' : '🌐 Google Translate (fallback)';
-  console.log(`\n🎬 YouTube O'zbek Transkript`);
+  const engine = anthropic ? '✨ Grgitton AI (premium)' : '🌐 Grgitton Basic';
+  console.log(`\n🎬 YouTube O'zbek Transkript — Grgitton`);
   console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`🤖 Whisper: small model`);
+  console.log(`🤖 Audio: Grgitton AI`);
   console.log(`${engine}: tarjima`);
   try {
     await pool.query('SELECT 1');

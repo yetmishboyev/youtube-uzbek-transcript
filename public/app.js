@@ -229,16 +229,15 @@ function streamTranscript(url) {
     }
 
     if (msg.type === 'engine') {
-      const isPremiumEngine = msg.engine === 'Claude Haiku';
-      loadingStatus.textContent = `${msg.engine} bilan tarjima qilinmoqda...`;
-      if (isPremiumEngine) loadingFill.style.background = 'linear-gradient(90deg, #f59e0b, #ef4444)';
+      loadingStatus.textContent = `${msg.engine} tarjima qilyabdi...`;
+      loadingFill.style.background = 'linear-gradient(90deg, #f59e0b, #ef4444)';
     }
 
     if (msg.type === 'start') {
       total = msg.total;
       segmentCount.textContent = `0 / ${total}`;
 
-      const sourceLabel = msg.source === 'whisper' ? '🤖 Whisper AI' : '📝 YouTube subtitrlar';
+      const sourceLabel = msg.source === 'whisper' ? '🤖 Grgitton AI' : '📝 YouTube subtitrlar';
       const langLabel = msg.lang && msg.lang !== 'uz' && msg.lang !== 'auto'
         ? msg.lang.toUpperCase() : '';
       sourceBadge.textContent = '';
@@ -390,7 +389,7 @@ function resetTranscriptPanel() {
   loadingBar.style.display = 'block';
   loadingFill.style.width = '0%';
   loadingFill.style.background = 'linear-gradient(90deg, var(--red), var(--blue))';
-  loadingStatus.textContent = 'Subtitrlar tekshirilmoqda...';
+  loadingStatus.textContent = 'Grgitton tahlil qilmoqda...';
   segmentCount.textContent = '—';
   currentTimeEl.textContent = '0:00';
   totalTimeEl.textContent = '0:00';
@@ -538,7 +537,11 @@ searchToggle.addEventListener('click', () => {
   else { searchInput.value = ''; applySearch(''); }
 });
 
-searchInput.addEventListener('input', () => applySearch(searchInput.value));
+let searchDebounce = null;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => applySearch(searchInput.value), 250);
+});
 copyBtn.addEventListener('click', copyTranscript);
 downloadBtn.addEventListener('click', downloadTranscript);
 
