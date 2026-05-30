@@ -853,15 +853,16 @@ html, body {
 
 .landing-tiers {
   display: flex; gap: 14px; width: 100%;
-  max-width: 680px; margin-top: 8px; align-items: stretch;
+  max-width: 760px; margin-top: 8px; align-items: stretch;
 }
 
 .tier-card {
   flex: 1; background: var(--surface);
   border: 1px solid var(--border); border-radius: 16px;
-  padding: 24px 18px 20px; position: relative;
+  padding: 24px 20px 20px; position: relative;
   display: flex; flex-direction: column; gap: 0;
   transition: transform 0.2s, box-shadow 0.2s;
+  text-align: left;
 }
 
 .tier-card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
@@ -887,14 +888,14 @@ html, body {
   padding: 3px 12px; border-radius: 20px; white-space: nowrap;
 }
 
-.tier-icon { font-size: 28px; margin-bottom: 10px; }
-.tier-name { font-size: 17px; font-weight: 800; margin-bottom: 4px; }
+.tier-icon { font-size: 26px; margin-bottom: 8px; display: block; }
+.tier-name { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
 
 .tier-price {
-  font-size: 28px; font-weight: 800; color: var(--text2);
+  font-size: 26px; font-weight: 800; color: var(--text2);
   margin-bottom: 16px; line-height: 1;
 }
-.tier-price span { font-size: 13px; font-weight: 500; color: var(--text3); }
+.tier-price span { font-size: 12px; font-weight: 500; color: var(--text3); }
 .tier-card.tier-free    .tier-price { color: #3b82f6; }
 .tier-card.tier-premium .tier-price { color: #f59e0b; }
 
@@ -905,11 +906,16 @@ html, body {
 
 .tier-features li {
   font-size: 12px; color: var(--text2);
-  display: flex; align-items: flex-start; gap: 7px; line-height: 1.4;
+  display: flex; align-items: flex-start; gap: 7px;
+  line-height: 1.5; text-align: left;
 }
 .tier-features li strong { color: var(--text); }
+.tier-features li span { text-align: left; }
 
-.tier-features li::before { content: '✓'; color: #22c55e; font-weight: 700; flex-shrink: 0; }
+.tier-features li::before {
+  content: '✓'; color: #22c55e; font-weight: 700;
+  flex-shrink: 0; margin-top: 1px;
+}
 .tier-features li.tier-no { color: var(--text3); }
 .tier-features li.tier-no::before { content: '✗'; color: var(--text3); }
 
