@@ -559,6 +559,26 @@ muteBtn.addEventListener('click', () => {
   }
 });
 
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+const fsIconExpand = document.getElementById('fsIconExpand');
+const fsIconCollapse = document.getElementById('fsIconCollapse');
+const workspace = document.getElementById('workspace');
+
+fullscreenBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    workspace.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+});
+
+document.addEventListener('fullscreenchange', () => {
+  const isFs = !!document.fullscreenElement;
+  fsIconExpand.style.display = isFs ? 'none' : 'inline';
+  fsIconCollapse.style.display = isFs ? 'inline' : 'none';
+  fullscreenBtn.title = isFs ? 'To\'liq ekrandan chiqish' : 'To\'liq ekran (video + transkript)';
+});
+
 document.addEventListener('keydown', e => {
   if (e.target === urlInput || e.target === searchInput) return;
   if (e.code === 'Space' && player && playerReady) {

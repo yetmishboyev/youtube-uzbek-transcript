@@ -928,6 +928,29 @@ html, body {
 }
 
 /* ============================================================
+   Fullscreen mode
+   ============================================================ */
+#workspace:fullscreen {
+  display: flex !important;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+}
+
+#workspace:fullscreen .player-panel {
+  flex: 0 0 62%;
+}
+
+#workspace:fullscreen .transcript-panel {
+  flex: 1;
+  background: #1a1a1a;
+}
+
+#workspace:fullscreen .player-wrapper {
+  flex: 1;
+}
+
+/* ============================================================
    Responsive
    ============================================================ */
 @media (max-width: 900px) {
