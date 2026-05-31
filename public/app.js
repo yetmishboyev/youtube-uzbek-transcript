@@ -1166,7 +1166,7 @@ function renderWelcomeScreen(tier) {
   if (!el) return;
 
   const used = lastUsageData ? lastUsageData.used : 0;
-  const defaultLimit = tier === 'guest' ? 2 : tier === 'free' ? 5 : 50;
+  const defaultLimit = tier === 'guest' ? 5 : tier === 'free' ? 15 : 50;
   const limit = lastUsageData ? lastUsageData.limit : defaultLimit;
   const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   const barColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#22c55e';
@@ -1174,90 +1174,69 @@ function renderWelcomeScreen(tier) {
     ? escHtml((currentUser.name || currentUser.email || '').substring(0, 32))
     : '';
 
+  const usageCard = `
+    <div class="wt-usage-card">
+      <div class="wt-usage-row">
+        <span class="wt-usage-lbl">Bugungi foydalanish</span>
+        <span class="wt-usage-num">${used} <span class="wt-usage-sep">/</span> ${limit}</span>
+      </div>
+      <div class="wt-bar-track"><div class="wt-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+    </div>`;
+
   let html = '';
 
   if (tier === 'guest') {
     html = `<div class="wt-content">
-      <div class="wt-header">
-        <div class="wt-icon">👤</div>
-        <h2 class="wt-title">Mehmon sifatida kirgansiz</h2>
-        <p class="wt-sub">YouTube havolasini yuqoriga kiriting va tarjimani boshlang</p>
+      <div class="wt-greeting">
+        <div class="wt-tier-chip">Mehmon</div>
+        <h2 class="wt-title">Video tarjimani boshlang</h2>
+        <p class="wt-sub">Yuqoriga YouTube havolasini kiriting</p>
       </div>
-      <div class="wt-usage-card">
-        <div class="wt-usage-row">
-          <span class="wt-usage-lbl">Bugungi so'rovlar</span>
-          <span class="wt-usage-num">${used} / ${limit}</span>
-        </div>
-        <div class="wt-bar-track"><div class="wt-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-      </div>
-      <div class="wt-limits-list">
-        <div class="wt-limit-row"><span class="wt-no-x">✗</span> Saqlash imkoni yo'q</div>
-        <div class="wt-limit-row"><span class="wt-no-x">✗</span> AI post yaratish yo'q</div>
-        <div class="wt-limit-row"><span class="wt-no-x">✗</span> Yuklab olish yo'q</div>
-      </div>
-      <div class="wt-cta-block">
-        <p class="wt-cta-hint">Ro'yxatdan o'tsangiz — kuniga <strong>5 ta</strong> video bepul!</p>
-        <button class="wt-btn wt-btn-free" id="welcomeRegisterBtn">Bepul ro'yxatdan o'tish</button>
-        <button class="wt-btn wt-btn-premium" id="welcomePremiumBtn">⚡ Premium boshlash — $5/oy</button>
+      ${usageCard}
+      <div class="wt-register-prompt">
+        <div class="wt-register-text">Ro'yxatdan o'ting — kuniga <strong>15 ta</strong> video bepul</div>
+        <button class="wt-btn wt-btn-free" id="welcomeRegisterBtn">Bepul boshlash →</button>
+        <button class="wt-btn wt-btn-premium" id="welcomePremiumBtn">⚡ Premium — $5/oy</button>
       </div>
     </div>`;
   } else if (tier === 'free') {
     html = `<div class="wt-content">
-      <div class="wt-header">
-        <div class="wt-icon">🆓</div>
-        <h2 class="wt-title">Bepul tarif faol</h2>
-        ${userDisplay ? `<p class="wt-sub">${userDisplay}</p>` : ''}
+      <div class="wt-greeting">
+        <div class="wt-tier-chip wt-tier-free">Bepul tarif</div>
+        ${userDisplay ? `<p class="wt-username">${userDisplay}</p>` : ''}
       </div>
-      <div class="wt-usage-card">
-        <div class="wt-usage-row">
-          <span class="wt-usage-lbl">Bugungi so'rovlar</span>
-          <span class="wt-usage-num">${used} / ${limit}</span>
-        </div>
-        <div class="wt-bar-track"><div class="wt-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-      </div>
+      ${usageCard}
       <div id="wtHistorySection"></div>
-      <div class="wt-upgrade-card">
-        <div class="wt-upgrade-hd">⚡ Premium'ga o'ting</div>
-        <ul class="wt-upgrade-ul">
-          <li>Kuniga <strong>50 ta</strong> video — 10× ko'p</li>
-          <li>Grgitton AI — aniqroq tarjima</li>
-          <li>Kuniga <strong>20 ta</strong> AI post</li>
-          <li>Instagram, Telegram, LinkedIn va boshqalar</li>
-        </ul>
-        <button class="wt-btn wt-btn-premium" id="welcomeUpgradeBtn">⚡ Premium boshlash — $5/oy</button>
+      <div class="wt-upgrade-strip">
+        <div class="wt-upgrade-strip-info">
+          <div class="wt-upgrade-strip-title">⚡ Premium</div>
+          <div class="wt-upgrade-strip-desc">50 ta/kun · 20 AI post · $5/oy</div>
+        </div>
+        <button class="wt-btn-upgrade" id="welcomeUpgradeBtn">Upgrade →</button>
       </div>
     </div>`;
   } else {
     html = `<div class="wt-content wt-premium-content">
-      <div class="wt-header">
-        <div class="wt-icon">⚡</div>
-        <h2 class="wt-title wt-title-premium">Premium faol</h2>
-        ${userDisplay ? `<p class="wt-sub">${userDisplay}</p>` : ''}
+      <div class="wt-greeting">
+        <div class="wt-tier-chip wt-tier-premium">⚡ Premium</div>
+        ${userDisplay ? `<p class="wt-username">${userDisplay}</p>` : ''}
       </div>
       <div class="wt-stats-row">
         <div class="wt-stat">
           <div class="wt-stat-n" style="color:#22c55e">${used}</div>
-          <div class="wt-stat-l">Bugun ishlatildi</div>
+          <div class="wt-stat-l">Bugun</div>
         </div>
         <div class="wt-stat">
-          <div class="wt-stat-n">${limit}</div>
-          <div class="wt-stat-l">Kunlik limit</div>
+          <div class="wt-stat-n">${Math.max(0, limit - used)}</div>
+          <div class="wt-stat-l">Qoldi</div>
         </div>
         <div class="wt-stat">
           <div class="wt-stat-n" style="color:#f59e0b">20</div>
-          <div class="wt-stat-l">AI post / kun</div>
+          <div class="wt-stat-l">AI post</div>
         </div>
       </div>
-      <div class="wt-features-grid">
-        <div class="wt-feat">🎯 Grgitton AI tarjima</div>
-        <div class="wt-feat">📱 6 platforma posti</div>
-        <div class="wt-feat">📥 Transkript yuklab olish</div>
-        <div class="wt-feat">🔍 Matn qidirish</div>
-        <div class="wt-feat">🎬 Real vaqt subtitlar</div>
-        <div class="wt-feat">🌐 Har qanday tildan</div>
-      </div>
       <div id="wtHistorySection"></div>
-      <p class="wt-tip">💡 Yuqoriga YouTube havolasini kiriting va tarjimani boshlang</p>
+      <p class="wt-tip">YouTube havolasini kiriting va tarjimani boshlang</p>
     </div>`;
   }
 
