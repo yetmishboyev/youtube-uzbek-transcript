@@ -4,6 +4,7 @@ const { YoutubeTranscript } = require('youtube-transcript');
 const axios = require('axios');
 const Anthropic = require('@anthropic-ai/sdk');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const path = require('path');
 const { execFile, spawn } = require('child_process');
 const fs = require('fs');
@@ -23,41 +24,66 @@ const anthropic = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
 
-// Nodemailer (Gmail SMTP)
-const mailer = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
+// Resend (primary) yoki Gmail SMTP (local fallback)
+const resendClient = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
+
+const mailer = !resendClient && process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
   ? nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
-      family: 4,  // IPv6 blok bo'lgan muhitlar uchun IPv4 majbur
+      family: 4,
       auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
     })
   : null;
 
 async function sendOtpEmail(toEmail, code) {
-  if (!mailer) return false;
-  try {
-    await mailer.sendMail({
-      from: `"Grgitton" <${process.env.GMAIL_USER}>`,
-      to: toEmail,
-      subject: `${code} — Grgitton kirish kodi`,
-      html: `
-        <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:32px;background:#0f0f0f;color:#fff;border-radius:12px">
-          <h2 style="margin:0 0 8px;font-size:22px">Grgitton</h2>
-          <p style="color:#aaa;margin:0 0 28px;font-size:14px">YouTube O'zbek Transkript</p>
-          <p style="margin:0 0 12px;font-size:15px">Kirish uchun kod:</p>
-          <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;text-align:center;letter-spacing:12px;font-size:36px;font-weight:800;color:#ff0000">
-            ${code}
-          </div>
-          <p style="color:#666;font-size:12px;margin:20px 0 0">Kod 10 daqiqa ichida amal qiladi. Agar siz yubormagansiz — e'tibor bermang.</p>
-        </div>
-      `,
-    });
-    return true;
-  } catch (err) {
-    console.error('Email yuborishda xato:', err.message);
-    return false;
+  const html = `
+    <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:32px;background:#0f0f0f;color:#fff;border-radius:12px">
+      <h2 style="margin:0 0 8px;font-size:22px">Grgitton</h2>
+      <p style="color:#aaa;margin:0 0 28px;font-size:14px">YouTube O'zbek Transkript</p>
+      <p style="margin:0 0 12px;font-size:15px">Kirish uchun kod:</p>
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;text-align:center;letter-spacing:12px;font-size:36px;font-weight:800;color:#ff0000">
+        ${code}
+      </div>
+      <p style="color:#666;font-size:12px;margin:20px 0 0">Kod 10 daqiqa ichida amal qiladi. Agar siz yubormagansiz — e'tibor bermang.</p>
+    </div>
+  `;
+
+  if (resendClient) {
+    try {
+      const { error } = await resendClient.emails.send({
+        from: 'Grgitton <onboarding@resend.dev>',
+        to: toEmail,
+        subject: `${code} — Grgitton kirish kodi`,
+        html,
+      });
+      if (error) { console.error('Resend xato:', error.message); return false; }
+      return true;
+    } catch (err) {
+      console.error('Resend xato:', err.message);
+      return false;
+    }
   }
+
+  if (mailer) {
+    try {
+      await mailer.sendMail({
+        from: `"Grgitton" <${process.env.GMAIL_USER}>`,
+        to: toEmail,
+        subject: `${code} — Grgitton kirish kodi`,
+        html,
+      });
+      return true;
+    } catch (err) {
+      console.error('Email yuborishda xato:', err.message);
+      return false;
+    }
+  }
+
+  return false;
 }
 
 // PostgreSQL pool
