@@ -29,6 +29,7 @@ const mailer = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
+      family: 4,  // IPv6 blok bo'lgan muhitlar uchun IPv4 majbur
       auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
     })
   : null;
