@@ -859,6 +859,9 @@ document.getElementById('heroLoginBtn')?.addEventListener('click', () => showLog
 document.getElementById('showLoginBtn')?.addEventListener('click', () => showLoginForm("Bepul ro'yxatdan o'ting"));
 document.getElementById('showLoginPremiumBtn')?.addEventListener('click', () => showLoginForm("Premium boshlash uchun kiring"));
 document.getElementById('backToTiersBtn')?.addEventListener('click', hideLoginForm);
+document.getElementById('heroDemoBtn')?.addEventListener('click', () => showLoginForm("Xush kelibsiz!"));
+document.getElementById('footerLoginBtn')?.addEventListener('click', () => showLoginForm("Xush kelibsiz!"));
+document.getElementById('footerPremiumBtn')?.addEventListener('click', () => showLoginForm("Premium boshlash uchun kiring"));
 
 // Avatar dropdown
 document.getElementById('userAvatar').addEventListener('click', e => {
@@ -1172,10 +1175,9 @@ async function loadPublicStats() {
     const bar = document.getElementById('socialProofBar');
     const vids = document.getElementById('proofVideos');
     const users = document.getElementById('proofUsers');
-    if (bar && vids && users && (data.videosTranslated > 0 || data.totalUsers > 0)) {
-      vids.textContent = data.videosTranslated.toLocaleString();
-      users.textContent = data.totalUsers.toLocaleString();
-      bar.style.display = 'inline-block';
+    if (bar && vids && users) {
+      vids.textContent = (data.videosTranslated || 0).toLocaleString();
+      users.textContent = (data.totalUsers || 0).toLocaleString();
     }
   } catch {}
 }
