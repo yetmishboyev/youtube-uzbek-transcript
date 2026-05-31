@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel — YouTube O'zbek</title>
+  <title>Admin Panel — Grgitton</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f1117;
-      --bg2: #1a1d27;
-      --bg3: #22263a;
-      --border: #2e3250;
-      --accent: #6c63ff;
-      --accent2: #4f46e5;
+      --bg: #0d0f14;
+      --bg2: #161920;
+      --bg3: #1e2130;
+      --border: #252836;
+      --accent: #ef4444;
+      --accent2: #dc2626;
       --red: #ef4444;
       --green: #22c55e;
       --yellow: #f59e0b;
@@ -39,53 +39,71 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(239,68,68,0.06) 0%, transparent 70%), var(--bg);
     }
     .login-card {
       background: var(--bg2);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px;
-      width: 360px;
+      border-radius: 18px;
+      width: 380px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
     }
-    .login-logo {
+    .login-card-top {
+      background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(220,38,38,0.06));
+      border-bottom: 1px solid rgba(239,68,68,0.15);
+      padding: 28px 32px 24px;
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 28px;
+      gap: 14px;
     }
-    .login-logo svg rect { fill: #FF0000; }
-    .login-logo-text { font-size: 16px; font-weight: 700; color: var(--text); }
-    .login-logo-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
-    .login-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-    .login-card p { color: var(--text2); font-size: 13px; margin-bottom: 24px; }
+    .login-logo-icon {
+      width: 42px; height: 42px;
+      background: var(--red);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      letter-spacing: -1px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 16px rgba(239,68,68,0.35);
+    }
+    .login-logo-text { font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
+    .login-logo-sub { font-size: 11px; color: var(--text3); margin-top: 1px; font-weight: 500; }
+    .login-card-body { padding: 28px 32px 32px; }
+    .login-card-body h2 { font-size: 18px; font-weight: 700; margin-bottom: 5px; }
+    .login-card-body p { color: var(--text2); font-size: 13px; margin-bottom: 22px; }
     .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-group label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 7px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
     .form-group input {
       width: 100%;
       background: var(--bg3);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 10px 14px;
+      padding: 11px 14px;
       color: var(--text);
       font-size: 14px;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .form-group input:focus { border-color: var(--accent); }
+    .form-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
     .btn-primary {
       width: 100%;
       background: var(--accent);
       color: #fff;
       border: none;
       border-radius: var(--radius);
-      padding: 11px;
+      padding: 12px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s, opacity 0.15s;
+      transition: background 0.15s, opacity 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 14px rgba(239,68,68,0.3);
     }
-    .btn-primary:hover { background: var(--accent2); }
-    .btn-primary:disabled { opacity: 0.5; cursor: default; }
+    .btn-primary:hover { background: var(--accent2); box-shadow: 0 4px 18px rgba(239,68,68,0.4); }
+    .btn-primary:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
     .login-error { color: var(--red); font-size: 13px; margin-top: 12px; text-align: center; min-height: 18px; }
 
     /* ── App Layout ── */
@@ -103,17 +121,29 @@
       position: sticky;
       top: 0;
       z-index: 100;
+      box-shadow: 0 1px 0 var(--border);
     }
-    .topbar-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
-    .topbar-badge {
-      background: var(--accent);
+    .topbar-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; letter-spacing: -0.3px; }
+    .topbar-logo-icon {
+      width: 28px; height: 28px;
+      background: var(--red);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
       color: #fff;
+      flex-shrink: 0;
+    }
+    .topbar-badge {
+      background: rgba(239,68,68,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(239,68,68,0.25);
       font-size: 10px;
       font-weight: 700;
-      padding: 2px 7px;
+      padding: 2px 8px;
       border-radius: 20px;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
     }
     .topbar-spacer { flex: 1; }
     .topbar-uptime { font-size: 12px; color: var(--text3); }
@@ -134,18 +164,28 @@
 
     /* Sidebar */
     .sidebar {
-      width: 200px;
+      width: 210px;
       background: var(--bg2);
       border-right: 1px solid var(--border);
-      padding: 20px 12px;
+      padding: 16px 10px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
       position: sticky;
       top: 56px;
       height: calc(100vh - 56px);
       overflow-y: auto;
     }
+    .sidebar-section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text3);
+      font-weight: 600;
+      padding: 10px 12px 6px;
+      margin-top: 6px;
+    }
+    .sidebar-section-label:first-child { margin-top: 0; padding-top: 4px; }
     .nav-item {
       display: flex;
       align-items: center;
@@ -163,7 +203,7 @@
       text-align: left;
     }
     .nav-item:hover { background: var(--bg3); color: var(--text); }
-    .nav-item.active { background: rgba(108,99,255,0.15); color: var(--accent); }
+    .nav-item.active { background: rgba(239,68,68,0.12); color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
     .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
 
     /* Content */
@@ -180,18 +220,36 @@
     /* Stats grid */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+      gap: 14px;
       margin-bottom: 28px;
     }
     .stat-card {
       background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.15s, transform 0.15s;
     }
-    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); font-weight: 600; margin-bottom: 10px; }
-    .stat-value { font-size: 32px; font-weight: 700; line-height: 1; }
+    .stat-card:hover { border-color: rgba(255,255,255,0.1); transform: translateY(-1px); }
+    .stat-row { display: flex; align-items: center; justify-content: space-between; }
+    .stat-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .stat-icon.red { background: rgba(239,68,68,0.12); }
+    .stat-icon.yellow { background: rgba(245,158,11,0.12); }
+    .stat-icon.gray { background: rgba(100,116,139,0.12); }
+    .stat-icon.green { background: rgba(34,197,94,0.12); }
+    .stat-icon.blue { background: rgba(59,130,246,0.12); }
+    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); font-weight: 600; }
+    .stat-value { font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: -1px; }
     .stat-value.green { color: var(--green); }
     .stat-value.yellow { color: var(--yellow); }
     .stat-value.accent { color: var(--accent); }
@@ -345,7 +403,7 @@
     .system-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px;
+      gap: 14px;
       margin-bottom: 28px;
     }
     .system-card {
@@ -355,20 +413,25 @@
       padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
     .system-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); font-weight: 600; }
-    .system-value { font-size: 18px; font-weight: 700; }
+    .system-value { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
     .system-value.ok { color: var(--green); }
     .system-value.error { color: var(--red); }
     .status-dot {
       display: inline-block;
       width: 8px; height: 8px;
       border-radius: 50%;
-      margin-right: 6px;
+      margin-right: 4px;
+      flex-shrink: 0;
     }
-    .dot-ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot-ok { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.6); animation: pulse-ok 2s infinite; }
     .dot-error { background: var(--red); }
+    @keyframes pulse-ok {
+      0%, 100% { box-shadow: 0 0 4px rgba(34,197,94,0.4); }
+      50% { box-shadow: 0 0 10px rgba(34,197,94,0.8); }
+    }
 
     /* Refresh btn */
     .btn-refresh {
@@ -478,24 +541,23 @@
 <!-- Login Page -->
 <div id="loginPage">
   <div class="login-card">
-    <div class="login-logo">
-      <svg width="28" height="20" viewBox="0 0 28 20" fill="none">
-        <rect width="28" height="20" rx="5" fill="#FF0000"/>
-        <polygon points="11,5 22,10 11,15" fill="white"/>
-      </svg>
+    <div class="login-card-top">
+      <div class="login-logo-icon">G</div>
       <div>
-        <div class="login-logo-text">YouTube O'zbek</div>
+        <div class="login-logo-text">Grgitton</div>
         <div class="login-logo-sub">Admin Panel</div>
       </div>
     </div>
-    <h2>Kirish</h2>
-    <p>Admin paneliga kirish uchun parolni kiriting.</p>
-    <div class="form-group">
-      <label>Parol</label>
-      <input type="password" id="loginPassword" placeholder="••••••••••" autofocus />
+    <div class="login-card-body">
+      <h2>Kirish</h2>
+      <p>Admin paneliga kirish uchun parolni kiriting.</p>
+      <div class="form-group">
+        <label>Parol</label>
+        <input type="password" id="loginPassword" placeholder="••••••••••" autofocus />
+      </div>
+      <button class="btn-primary" id="loginBtn">Kirish</button>
+      <div class="login-error" id="loginError"></div>
     </div>
-    <button class="btn-primary" id="loginBtn">Kirish</button>
-    <div class="login-error" id="loginError"></div>
   </div>
 </div>
 
@@ -505,11 +567,8 @@
   <!-- Topbar -->
   <div class="topbar">
     <div class="topbar-logo">
-      <svg width="22" height="16" viewBox="0 0 28 20" fill="none">
-        <rect width="28" height="20" rx="5" fill="#FF0000"/>
-        <polygon points="11,5 22,10 11,15" fill="white"/>
-      </svg>
-      YouTube O'zbek
+      <div class="topbar-logo-icon">G</div>
+      Grgitton
       <span class="topbar-badge">Admin</span>
     </div>
     <div class="topbar-spacer"></div>
@@ -520,10 +579,11 @@
   <div class="app-body">
     <!-- Sidebar -->
     <nav class="sidebar">
+      <div class="sidebar-section-label">Asosiy</div>
       <button class="nav-item active" data-page="dashboard">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-          <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>
         </svg>
         Dashboard
       </button>
@@ -535,6 +595,7 @@
         </svg>
         Foydalanuvchilar
       </button>
+      <div class="sidebar-section-label">Ma'lumotlar</div>
       <button class="nav-item" data-page="log">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -551,6 +612,7 @@
         Premium So'rovlar
         <span class="nav-badge" id="navUpgradeBadge" style="display:none">0</span>
       </button>
+      <div class="sidebar-section-label">Server</div>
       <button class="nav-item" data-page="system">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -571,12 +633,48 @@
         </div>
 
         <div class="stats-grid" id="statsGrid">
-          <div class="stat-card"><div class="stat-label">Jami foydalanuvchilar</div><div class="stat-value accent" id="statTotal">—</div></div>
-          <div class="stat-card"><div class="stat-label">Premium</div><div class="stat-value yellow" id="statPremium">—</div></div>
-          <div class="stat-card"><div class="stat-label">Bepul</div><div class="stat-value" id="statFree">—</div></div>
-          <div class="stat-card"><div class="stat-label">Bugun ro'yxatdan o'tdi</div><div class="stat-value green" id="statNewToday">—</div></div>
-          <div class="stat-card"><div class="stat-label">Bu hafta ro'yxatdan o'tdi</div><div class="stat-value" id="statNewWeek">—</div></div>
-          <div class="stat-card"><div class="stat-label">7 kun ichida faol</div><div class="stat-value" id="statActive7d">—</div></div>
+          <div class="stat-card">
+            <div class="stat-row">
+              <div class="stat-label">Jami foydalanuvchilar</div>
+              <div class="stat-icon red">👥</div>
+            </div>
+            <div class="stat-value accent" id="statTotal">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-row">
+              <div class="stat-label">Premium</div>
+              <div class="stat-icon yellow">⚡</div>
+            </div>
+            <div class="stat-value yellow" id="statPremium">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-row">
+              <div class="stat-label">Bepul</div>
+              <div class="stat-icon gray">👤</div>
+            </div>
+            <div class="stat-value" id="statFree">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-row">
+              <div class="stat-label">Bugun ro'yxatdan o'tdi</div>
+              <div class="stat-icon green">✨</div>
+            </div>
+            <div class="stat-value green" id="statNewToday">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-row">
+              <div class="stat-label">Bu hafta</div>
+              <div class="stat-icon blue">📅</div>
+            </div>
+            <div class="stat-value" id="statNewWeek">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-row">
+              <div class="stat-label">7 kun ichida faol</div>
+              <div class="stat-icon green">🔥</div>
+            </div>
+            <div class="stat-value" id="statActive7d">—</div>
+          </div>
         </div>
 
         <div class="page-header" style="margin-top:8px;">
