@@ -142,25 +142,6 @@
 
       </div>
 
-      <!-- Login formasi -->
-      <div class="email-login-form" id="emailLoginForm" style="display:none">
-        <div id="loginStep1">
-          <p class="login-form-title" id="loginFormTitle">Bepul ro'yxatdan o'ting</p>
-          <input type="email" id="emailInput" class="email-input" placeholder="email@gmail.com" autocomplete="email" />
-          <button class="btn-email-login" id="emailLoginBtn">Davom etish →</button>
-          <div class="email-login-error" id="emailLoginError"></div>
-          <button class="btn-back-landing" id="backToTiersBtn">← Orqaga</button>
-        </div>
-        <div id="loginStep2" style="display:none">
-          <p class="login-form-title">Emailni tasdiqlang</p>
-          <p class="login-otp-hint" id="otpHint">Emailingizga 6 xonali kod yuborildi</p>
-          <input type="text" id="otpInput" class="email-input otp-input" placeholder="● ● ● ● ● ●"
-            maxlength="6" autocomplete="one-time-code" inputmode="numeric" />
-          <button class="btn-email-login" id="otpVerifyBtn">Kirish ✓</button>
-          <div class="email-login-error" id="otpError"></div>
-          <button class="btn-back-landing" id="backToEmailBtn">← Email ga qaytish</button>
-        </div>
-      </div>
 
     </div>
   </div>
@@ -338,6 +319,63 @@
 
       </div>
     </main>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="loginModal" class="modal-overlay" style="display:none">
+    <div class="modal login-modal">
+
+      <!-- Logo + close -->
+      <div class="login-modal-header">
+        <div class="login-modal-logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <rect width="24" height="24" rx="6" fill="#ef4444"/>
+            <polygon points="9,6 19,12 9,18" fill="white"/>
+          </svg>
+          <span>Grgitton</span>
+        </div>
+        <button class="modal-close" id="loginModalClose" style="position:static">✕</button>
+      </div>
+
+      <!-- Step 1: Email -->
+      <div id="loginStep1" class="login-step-body">
+        <div class="login-step-dots">
+          <span class="login-dot login-dot-active"></span>
+          <span class="login-dot"></span>
+        </div>
+        <h2 class="login-title" id="loginFormTitle">Xush kelibsiz!</h2>
+        <p class="login-subtitle">Emailingizni kiriting — tasdiqlash kodi yuboramiz</p>
+        <div class="login-input-group">
+          <label class="login-label">Email manzil</label>
+          <input type="email" id="emailInput" class="email-input" placeholder="email@gmail.com" autocomplete="email" />
+        </div>
+        <button class="btn-email-login" id="emailLoginBtn">Davom etish →</button>
+        <div class="email-login-error" id="emailLoginError"></div>
+        <button class="btn-back-landing" id="backToTiersBtn">← Orqaga</button>
+      </div>
+
+      <!-- Step 2: OTP -->
+      <div id="loginStep2" class="login-step-body" style="display:none">
+        <div class="login-step-dots">
+          <span class="login-dot login-dot-done">✓</span>
+          <span class="login-dot login-dot-active"></span>
+        </div>
+        <h2 class="login-title">Emailni tasdiqlang</h2>
+        <p class="login-otp-hint" id="otpHint">Emailingizga 6 xonali kod yuborildi</p>
+        <div class="otp-boxes" id="otpBoxes">
+          <input class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text" autocomplete="one-time-code" />
+          <input class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text" />
+          <input class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text" />
+          <input class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text" />
+          <input class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text" />
+          <input class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text" />
+        </div>
+        <button class="btn-email-login" id="otpVerifyBtn">Kirish →</button>
+        <div class="email-login-error" id="otpError"></div>
+        <button class="btn-back-landing" id="backToEmailBtn">← Email ga qaytish</button>
+      </div>
+
+    </div>
   </div>
 
   <!-- Upgrade Modal -->

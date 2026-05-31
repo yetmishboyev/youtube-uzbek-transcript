@@ -646,8 +646,7 @@ async function initAuth() {
       document.getElementById('landingPage').style.display = 'block';
       document.getElementById('appContainer').style.display = 'none';
       document.getElementById('headerGuest').style.display = 'flex';
-      document.getElementById('emailLoginForm').style.display = 'none';
-      document.querySelector('.landing-tiers').style.display = 'flex';
+      document.getElementById('loginModal').style.display = 'none';
       loadUsage();
       loadPublicStats();
       return;
@@ -719,17 +718,16 @@ async function sendOtp(email) {
       return;
     }
     if (data.skipOtp) {
-      // OTP sozlanmagan — to'g'ridan-to'g'ri kirish
       const me = await (await fetch('/api/me')).json();
-      if (me.loggedIn) showApp(me);
+      if (me.loggedIn) { hideLoginForm(); showApp(me); }
       return;
     }
-    // OTP kodi yuborildi — 2-qadam ko'rsat
     pendingOtpEmail = email;
     document.getElementById('loginStep1').style.display = 'none';
-    document.getElementById('loginStep2').style.display = 'block';
+    document.getElementById('loginStep2').style.display = 'flex';
     document.getElementById('otpHint').textContent = `${email} ga 6 xonali kod yuborildi`;
-    setTimeout(() => document.getElementById('otpInput').focus(), 50);
+    clearOtpBoxes();
+    setTimeout(() => document.querySelectorAll('.otp-box')[0]?.focus(), 80);
   } catch {
     errEl.textContent = 'Server bilan ulanishda xato';
     btn.disabled = false;
@@ -754,18 +752,62 @@ async function verifyOtp(code) {
     if (!res.ok) {
       errEl.textContent = data.error || "Kod noto'g'ri";
       btn.disabled = false;
-      btn.textContent = 'Kirish ✓';
+      btn.textContent = 'Kirish →';
+      clearOtpBoxes();
+      setTimeout(() => document.querySelectorAll('.otp-box')[0]?.focus(), 50);
       return;
     }
     const me = await (await fetch('/api/me')).json();
-    if (me.loggedIn) showApp(me);
-    else { errEl.textContent = 'Kirish amalga oshmadi'; btn.disabled = false; btn.textContent = 'Kirish ✓'; }
+    if (me.loggedIn) { hideLoginForm(); showApp(me); }
+    else { errEl.textContent = 'Kirish amalga oshmadi'; btn.disabled = false; btn.textContent = 'Kirish →'; }
   } catch {
     errEl.textContent = 'Server bilan ulanishda xato';
     btn.disabled = false;
-    btn.textContent = 'Kirish ✓';
+    btn.textContent = 'Kirish →';
   }
 }
+
+function clearOtpBoxes() {
+  document.querySelectorAll('.otp-box').forEach(b => { b.value = ''; b.classList.remove('filled'); });
+}
+
+function getOtpCode() {
+  return [...document.querySelectorAll('.otp-box')].map(b => b.value).join('');
+}
+
+// OTP box input handling
+document.getElementById('otpBoxes')?.addEventListener('input', e => {
+  const box = e.target;
+  if (!box.classList.contains('otp-box')) return;
+  const val = box.value.replace(/\D/g, '');
+  box.value = val ? val[val.length - 1] : '';
+  box.classList.toggle('filled', !!box.value);
+  if (box.value) {
+    const boxes = [...document.querySelectorAll('.otp-box')];
+    const idx = boxes.indexOf(box);
+    if (idx < 5) boxes[idx + 1].focus();
+    else if (getOtpCode().length === 6) verifyOtp(getOtpCode());
+  }
+});
+
+document.getElementById('otpBoxes')?.addEventListener('keydown', e => {
+  const box = e.target;
+  if (!box.classList.contains('otp-box')) return;
+  const boxes = [...document.querySelectorAll('.otp-box')];
+  const idx = boxes.indexOf(box);
+  if (e.key === 'Backspace' && !box.value && idx > 0) boxes[idx - 1].focus();
+  if (e.key === 'ArrowLeft' && idx > 0) boxes[idx - 1].focus();
+  if (e.key === 'ArrowRight' && idx < 5) boxes[idx + 1].focus();
+});
+
+document.getElementById('otpBoxes')?.addEventListener('paste', e => {
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+  const boxes = [...document.querySelectorAll('.otp-box')];
+  text.split('').forEach((ch, i) => { if (boxes[i]) { boxes[i].value = ch; boxes[i].classList.add('filled'); } });
+  if (text.length === 6) verifyOtp(text);
+  else boxes[Math.min(text.length, 5)].focus();
+});
 
 document.getElementById('emailLoginBtn').addEventListener('click', () => {
   const email = document.getElementById('emailInput').value.trim();
@@ -773,62 +815,49 @@ document.getElementById('emailLoginBtn').addEventListener('click', () => {
 });
 
 document.getElementById('emailInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const email = e.target.value.trim();
-    if (email) sendOtp(email);
-  }
+  if (e.key === 'Enter') { const email = e.target.value.trim(); if (email) sendOtp(email); }
 });
 
 document.getElementById('otpVerifyBtn')?.addEventListener('click', () => {
-  const code = document.getElementById('otpInput').value.trim();
+  const code = getOtpCode();
   if (code.length === 6) verifyOtp(code);
-});
-
-document.getElementById('otpInput')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const code = e.target.value.trim();
-    if (code.length === 6) verifyOtp(code);
-  }
 });
 
 document.getElementById('backToEmailBtn')?.addEventListener('click', () => {
   document.getElementById('loginStep2').style.display = 'none';
-  document.getElementById('loginStep1').style.display = 'block';
+  document.getElementById('loginStep1').style.display = 'flex';
   const btn = document.getElementById('emailLoginBtn');
-  btn.disabled = false;
-  btn.textContent = 'Davom etish →';
+  btn.disabled = false; btn.textContent = 'Davom etish →';
   document.getElementById('emailLoginError').textContent = '';
+});
+
+document.getElementById('loginModalClose')?.addEventListener('click', hideLoginForm);
+document.getElementById('loginModal')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('loginModal')) hideLoginForm();
 });
 
 document.getElementById('headerLoginBtn')?.addEventListener('click', () => {
   showLoginForm("Kirish / Ro'yxatdan o'tish");
 });
 
-// Landing tugmalari
-function showLoginForm(title = "Ro'yxatdan o'tish") {
+function showLoginForm(title = "Xush kelibsiz!") {
   document.getElementById('loginFormTitle').textContent = title;
-  document.getElementById('emailLoginForm').style.display = 'flex';
-  document.querySelector('.landing-tiers').style.display = 'none';
-  setTimeout(() => document.getElementById('emailInput').focus(), 50);
+  document.getElementById('loginStep1').style.display = 'flex';
+  document.getElementById('loginStep2').style.display = 'none';
+  const btn = document.getElementById('emailLoginBtn');
+  btn.disabled = false; btn.textContent = 'Davom etish →';
+  document.getElementById('emailLoginError').textContent = '';
+  document.getElementById('loginModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('emailInput').focus(), 80);
 }
 
 function hideLoginForm() {
-  document.getElementById('emailLoginForm').style.display = 'none';
-  document.querySelector('.landing-tiers').style.display = 'flex';
+  document.getElementById('loginModal').style.display = 'none';
 }
 
-document.getElementById('heroLoginBtn')?.addEventListener('click', () => {
-  showLoginForm("Bepul ro'yxatdan o'ting");
-});
-
-document.getElementById('showLoginBtn')?.addEventListener('click', () => {
-  showLoginForm("Bepul ro'yxatdan o'ting");
-});
-
-document.getElementById('showLoginPremiumBtn')?.addEventListener('click', () => {
-  showLoginForm("Premium boshlash uchun kiring");
-});
-
+document.getElementById('heroLoginBtn')?.addEventListener('click', () => showLoginForm("Xush kelibsiz!"));
+document.getElementById('showLoginBtn')?.addEventListener('click', () => showLoginForm("Bepul ro'yxatdan o'ting"));
+document.getElementById('showLoginPremiumBtn')?.addEventListener('click', () => showLoginForm("Premium boshlash uchun kiring"));
 document.getElementById('backToTiersBtn')?.addEventListener('click', hideLoginForm);
 
 // Avatar dropdown

@@ -1003,47 +1003,131 @@ html, body {
   box-shadow: 0 6px 20px rgba(245,158,11,0.35);
 }
 
-.email-login-form {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 10px; width: 100%; max-width: 380px; margin-top: 8px;
+/* ============================================================
+   Login Modal
+   ============================================================ */
+.login-modal {
+  max-width: 400px;
+  padding: 0;
+  text-align: left;
 }
 
-.login-form-title {
-  font-size: 16px; font-weight: 700; color: var(--text);
-  margin-bottom: 4px;
+.login-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
 }
 
-.btn-back-landing {
-  background: none; border: none; color: var(--text3);
-  font-size: 13px; cursor: pointer; padding: 4px 8px;
-  transition: color 0.15s;
+.login-modal-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 800; color: var(--text);
+  letter-spacing: -0.3px;
 }
-.btn-back-landing:hover { color: var(--text2); }
+
+.login-step-body {
+  padding: 24px 24px 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.login-step-dots {
+  display: flex; gap: 6px; align-items: center;
+}
+
+.login-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--surface3); border: 1.5px solid var(--border);
+  font-size: 0; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.login-dot-active {
+  background: var(--red); border-color: var(--red);
+  width: 22px; border-radius: 4px;
+}
+.login-dot-done {
+  background: #22c55e; border-color: #22c55e;
+  font-size: 8px; color: white; width: 18px; height: 18px;
+}
+
+.login-title {
+  font-size: 20px; font-weight: 800;
+  color: var(--text); margin: 0; letter-spacing: -0.4px;
+}
+
+.login-subtitle {
+  font-size: 13px; color: var(--text3); margin: -6px 0 0; line-height: 1.5;
+}
+
+.login-input-group {
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+.login-label {
+  font-size: 11px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
 
 .email-input {
   width: 100%; background: var(--surface2);
-  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); border-radius: 10px;
   padding: 13px 16px; color: var(--text); font-size: 15px;
-  outline: none; text-align: left;
+  outline: none; box-sizing: border-box;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .email-input:focus {
   border-color: var(--red);
-  box-shadow: 0 0 0 3px rgba(255,0,0,0.1);
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
 }
 .email-input::placeholder { color: var(--text3); }
 
 .btn-email-login {
   width: 100%; background: var(--red); border: none;
-  border-radius: var(--radius-sm); color: white;
-  font-size: 15px; font-weight: 600; padding: 13px;
-  cursor: pointer; transition: background var(--transition);
+  border-radius: 12px; color: white;
+  font-size: 15px; font-weight: 700; padding: 14px;
+  cursor: pointer; transition: all var(--transition);
+  letter-spacing: -0.2px;
 }
-.btn-email-login:hover { background: #cc0000; }
-.btn-email-login:disabled { background: #666; cursor: not-allowed; }
+.btn-email-login:hover { background: #dc2626; box-shadow: 0 4px 16px rgba(239,68,68,0.35); }
+.btn-email-login:disabled { background: #444; cursor: not-allowed; box-shadow: none; }
 
 .email-login-error {
-  font-size: 13px; color: #f87171; min-height: 18px;
+  font-size: 12px; color: #f87171; min-height: 16px; margin-top: -6px;
+}
+
+/* OTP boxes */
+.otp-boxes {
+  display: flex; gap: 8px; justify-content: center; margin: 4px 0;
+}
+
+.otp-box {
+  width: 48px; height: 56px;
+  text-align: center; font-size: 22px; font-weight: 800;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 12px; color: var(--text); outline: none;
+  caret-color: var(--red);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.otp-box:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
+}
+.otp-box.filled {
+  border-color: #555; background: var(--surface3);
+}
+
+.login-otp-hint {
+  font-size: 13px; color: var(--text3); margin: -6px 0 0;
+  line-height: 1.5;
+}
+
+.btn-back-landing {
+  background: none; border: none; color: var(--text3);
+  font-size: 12px; cursor: pointer; padding: 2px 0;
+  transition: color 0.15s; text-align: center; width: 100%;
+}
+.btn-back-landing:hover { color: var(--text2); }
+
+.email-login-error {
+  font-size: 12px; color: #f87171; min-height: 16px; margin-top: -6px;
 }
 
 .tier-info-banner {
@@ -1489,23 +1573,6 @@ html, body {
   margin-bottom: 4px;
 }
 
-/* ============================================================
-   OTP input
-   ============================================================ */
-.otp-input {
-  text-align: center;
-  letter-spacing: 10px;
-  font-size: 24px;
-  font-weight: 700;
-  font-family: 'Courier New', monospace;
-}
-
-.login-otp-hint {
-  font-size: 13px;
-  color: var(--text2);
-  margin-bottom: 12px;
-  text-align: center;
-}
 
 /* ============================================================
    Header history button
