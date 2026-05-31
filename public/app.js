@@ -821,21 +821,6 @@ document.getElementById('heroLoginBtn')?.addEventListener('click', () => {
   showLoginForm("Bepul ro'yxatdan o'ting");
 });
 
-async function enterGuestMode() {
-  await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
-  currentUser = null;
-  document.getElementById('landingPage').style.display = 'none';
-  document.getElementById('appContainer').style.display = 'block';
-  document.getElementById('headerGuest').style.display = 'flex';
-  document.getElementById('headerUser').style.display = 'none';
-  document.getElementById('sharePostBtn').style.display = 'none';
-  renderWelcomeScreen('guest');
-  loadUsage();
-  urlInput.focus();
-}
-
-document.getElementById('heroTryBtn')?.addEventListener('click', enterGuestMode);
-
 document.getElementById('showLoginBtn')?.addEventListener('click', () => {
   showLoginForm("Bepul ro'yxatdan o'ting");
 });
@@ -845,8 +830,6 @@ document.getElementById('showLoginPremiumBtn')?.addEventListener('click', () => 
 });
 
 document.getElementById('backToTiersBtn')?.addEventListener('click', hideLoginForm);
-
-document.getElementById('tryWithoutLoginBtn')?.addEventListener('click', enterGuestMode);
 
 // Avatar dropdown
 document.getElementById('userAvatar').addEventListener('click', e => {
@@ -1164,7 +1147,7 @@ function renderWelcomeScreen(tier) {
   if (!el) return;
 
   const used = lastUsageData ? lastUsageData.used : 0;
-  const defaultLimit = tier === 'guest' ? 5 : tier === 'free' ? 15 : 50;
+  const defaultLimit = tier === 'free' ? 15 : 50;
   const limit = lastUsageData ? lastUsageData.limit : defaultLimit;
   const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   const barColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#22c55e';
@@ -1183,21 +1166,7 @@ function renderWelcomeScreen(tier) {
 
   let html = '';
 
-  if (tier === 'guest') {
-    html = `<div class="wt-content">
-      <div class="wt-greeting">
-        <div class="wt-tier-chip">Mehmon</div>
-        <h2 class="wt-title">Video tarjimani boshlang</h2>
-        <p class="wt-sub">Yuqoriga YouTube havolasini kiriting</p>
-      </div>
-      ${usageCard}
-      <div class="wt-register-prompt">
-        <div class="wt-register-text">Ro'yxatdan o'ting — kuniga <strong>15 ta</strong> video bepul</div>
-        <button class="wt-btn wt-btn-free" id="welcomeRegisterBtn">Bepul boshlash →</button>
-        <button class="wt-btn wt-btn-premium" id="welcomePremiumBtn">⚡ Premium — $5/oy</button>
-      </div>
-    </div>`;
-  } else if (tier === 'free') {
+  if (tier === 'free') {
     html = `<div class="wt-content">
       <div class="wt-greeting">
         <div class="wt-tier-chip wt-tier-free">Bepul tarif</div>
@@ -1267,26 +1236,6 @@ function renderWelcomeScreen(tier) {
       });
     })();
   }
-
-  document.getElementById('welcomeRegisterBtn')?.addEventListener('click', () => {
-    document.getElementById('appContainer').style.display = 'none';
-    document.getElementById('landingPage').style.display = 'block';
-    document.getElementById('headerGuest').style.display = 'flex';
-    document.getElementById('headerUser').style.display = 'none';
-    document.querySelector('.landing-tiers').style.display = 'flex';
-    document.getElementById('emailLoginForm').style.display = 'none';
-    showLoginForm("Bepul ro'yxatdan o'ting");
-  });
-
-  document.getElementById('welcomePremiumBtn')?.addEventListener('click', () => {
-    document.getElementById('appContainer').style.display = 'none';
-    document.getElementById('landingPage').style.display = 'block';
-    document.getElementById('headerGuest').style.display = 'flex';
-    document.getElementById('headerUser').style.display = 'none';
-    document.querySelector('.landing-tiers').style.display = 'flex';
-    document.getElementById('emailLoginForm').style.display = 'none';
-    showLoginForm("Premium boshlash uchun kiring");
-  });
 
   document.getElementById('welcomeUpgradeBtn')?.addEventListener('click', openUpgradeModal);
 }

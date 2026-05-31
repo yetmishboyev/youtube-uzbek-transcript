@@ -937,7 +937,6 @@ html, body {
 }
 .tier-card:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,0.4); }
 
-.tier-card.tier-guest { border-color: #222; }
 .tier-card.tier-free {
   border-color: rgba(59,130,246,0.45);
   background: linear-gradient(160deg, rgba(59,130,246,0.07) 0%, transparent 60%);
@@ -965,7 +964,6 @@ html, body {
   margin-bottom: 20px; letter-spacing: -2px;
 }
 .tier-price span { font-size: 14px; font-weight: 500; color: var(--text3); letter-spacing: 0; }
-.tier-card.tier-guest  .tier-price { color: var(--text2); font-size: 28px; letter-spacing: 0; }
 .tier-card.tier-free   .tier-price { color: #60a5fa; }
 .tier-card.tier-premium .tier-price { color: #fbbf24; }
 
@@ -989,12 +987,6 @@ html, body {
   font-size: 14px; font-weight: 700; cursor: pointer;
   border: none; transition: all 0.15s; margin-top: auto;
 }
-
-.tier-cta-guest {
-  background: var(--surface2); color: var(--text2);
-  border: 1.5px solid #2a2a2a;
-}
-.tier-cta-guest:hover { background: var(--surface3); color: var(--text); border-color: #444; }
 
 .tier-cta-free {
   background: rgba(59,130,246,0.12); color: #60a5fa;
@@ -1108,32 +1100,12 @@ html, body {
 .wt-bar-track { height: 3px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
 .wt-bar-fill  { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
 
-/* Guest register prompt */
-.wt-register-prompt {
-  width: 100%; display: flex; flex-direction: column; gap: 8px;
-}
-.wt-register-text {
-  font-size: 12px; color: var(--text2); text-align: center;
-  padding: 10px 14px; background: var(--surface2);
-  border: 1px solid var(--border); border-radius: 10px;
-}
-.wt-register-text strong { color: var(--text); }
-
 /* Buttons */
 .wt-btn {
   width: 100%; padding: 11px 16px; border-radius: 10px;
   font-size: 13px; font-weight: 700; cursor: pointer;
   border: none; transition: all 0.15s;
 }
-.wt-btn-free {
-  background: rgba(96,165,250,0.1); color: #60a5fa;
-  border: 1.5px solid rgba(96,165,250,0.35);
-}
-.wt-btn-free:hover { background: rgba(96,165,250,0.2); }
-.wt-btn-premium {
-  background: linear-gradient(135deg, #f59e0b, #ef4444); color: white;
-}
-.wt-btn-premium:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(245,158,11,0.3); }
 
 /* Upgrade strip (free) */
 .wt-upgrade-strip {
