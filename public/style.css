@@ -70,43 +70,49 @@ html, body {
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .logo-text {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-  color: var(--text);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #ffffff 0%, #ef4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
-
-.logo-accent { color: var(--red); }
 
 .header-right { display: flex; align-items: center; gap: 10px; }
 
 .btn-google-small {
   display: flex; align-items: center; gap: 7px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 7px 14px;
-  color: var(--text); font-size: 13px; font-weight: 500;
+  background: #ef4444; border: none;
+  border-radius: 10px; padding: 7px 18px;
+  color: white; font-size: 13px; font-weight: 700;
   text-decoration: none; cursor: pointer;
-  transition: all var(--transition);
+  transition: all 0.15s;
+  box-shadow: 0 2px 12px rgba(239,68,68,0.3);
 }
-.btn-google-small:hover { background: var(--surface3); border-color: #555; }
+.btn-google-small:hover { background: #dc2626; box-shadow: 0 4px 16px rgba(239,68,68,0.4); transform: translateY(-1px); }
 
 .header-user-area { display: flex; align-items: center; gap: 10px; }
 
 .btn-upgrade {
   background: linear-gradient(135deg, #f59e0b, #ef4444);
-  border: none; border-radius: var(--radius-sm);
+  border: none; border-radius: 10px;
   color: white; font-size: 12px; font-weight: 700;
-  padding: 6px 14px; cursor: pointer;
-  transition: opacity var(--transition);
-  letter-spacing: 0.3px;
+  padding: 7px 16px; cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 10px rgba(245,158,11,0.25);
 }
-.btn-upgrade:hover { opacity: 0.85; }
+.btn-upgrade:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(245,158,11,0.35); }
 .btn-upgrade.premium-active {
   background: linear-gradient(135deg, #7e22ce, #4f46e5);
+  box-shadow: 0 2px 10px rgba(79,70,229,0.3);
 }
 
 .user-menu { position: relative; }
@@ -1400,12 +1406,12 @@ html, body {
    ============================================================ */
 .btn-history {
   display: flex; align-items: center; gap: 6px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 6px 12px;
-  color: var(--text2); font-size: 12px; font-weight: 500;
+  background: transparent; border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 6px 12px;
+  color: var(--text2); font-size: 12px; font-weight: 600;
   cursor: pointer; transition: all var(--transition);
 }
-.btn-history:hover { background: var(--surface3); color: var(--text); border-color: #555; }
+.btn-history:hover { background: var(--surface2); color: var(--text); border-color: #555; }
 
 /* ============================================================
    History Modal

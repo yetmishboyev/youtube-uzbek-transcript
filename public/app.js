@@ -818,7 +818,9 @@ document.getElementById('heroLoginBtn')?.addEventListener('click', () => {
   showLoginForm("Bepul ro'yxatdan o'ting");
 });
 
-document.getElementById('heroTryBtn')?.addEventListener('click', () => {
+async function enterGuestMode() {
+  await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
+  currentUser = null;
   document.getElementById('landingPage').style.display = 'none';
   document.getElementById('appContainer').style.display = 'block';
   document.getElementById('headerGuest').style.display = 'flex';
@@ -827,7 +829,9 @@ document.getElementById('heroTryBtn')?.addEventListener('click', () => {
   renderWelcomeScreen('guest');
   loadUsage();
   urlInput.focus();
-});
+}
+
+document.getElementById('heroTryBtn')?.addEventListener('click', enterGuestMode);
 
 document.getElementById('showLoginBtn')?.addEventListener('click', () => {
   showLoginForm("Bepul ro'yxatdan o'ting");
@@ -839,16 +843,7 @@ document.getElementById('showLoginPremiumBtn')?.addEventListener('click', () => 
 
 document.getElementById('backToTiersBtn')?.addEventListener('click', hideLoginForm);
 
-document.getElementById('tryWithoutLoginBtn')?.addEventListener('click', () => {
-  document.getElementById('landingPage').style.display = 'none';
-  document.getElementById('appContainer').style.display = 'block';
-  document.getElementById('headerGuest').style.display = 'flex';
-  document.getElementById('headerUser').style.display = 'none';
-  document.getElementById('sharePostBtn').style.display = 'none';
-  renderWelcomeScreen('guest');
-  loadUsage();
-  urlInput.focus();
-});
+document.getElementById('tryWithoutLoginBtn')?.addEventListener('click', enterGuestMode);
 
 // Avatar dropdown
 document.getElementById('userAvatar').addEventListener('click', e => {
