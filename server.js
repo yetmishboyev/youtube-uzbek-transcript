@@ -122,7 +122,7 @@ app.post('/auth/send-otp', async (req, res) => {
   if (!email || !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email))
     return res.status(400).json({ error: "To'g'ri email kiriting" });
 
-  if (!mailer) {
+  if (!resendClient && !mailer) {
     // OTP tizimi sozlanmagan — to'g'ridan-to'g'ri login
     try {
       const name = (email.split('@')[0] || 'user').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 50) || 'user';
