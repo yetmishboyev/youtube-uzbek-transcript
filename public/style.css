@@ -1261,7 +1261,7 @@ html, body {
    Social Post Modal
    ============================================================ */
 .social-modal {
-  max-width: 540px;
+  max-width: 500px;
   width: 95%;
   text-align: left;
   padding: 0;
@@ -1269,7 +1269,7 @@ html, body {
 
 .social-modal-topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1279,8 +1279,8 @@ html, body {
 
 .social-modal-topbar-icon {
   width: 30px; height: 30px;
-  background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));
-  border: 1px solid rgba(168,85,247,0.2);
+  background: linear-gradient(135deg, rgba(168,85,247,0.18), rgba(236,72,153,0.12));
+  border: 1px solid rgba(168,85,247,0.25);
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   color: #a855f7;
@@ -1291,51 +1291,86 @@ html, body {
   letter-spacing: -0.2px;
 }
 
+.social-premium-chip {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
+  color: #f59e0b;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 100px; padding: 2px 7px;
+}
+
 .social-modal-header {
-  padding: 10px 20px 4px;
+  padding: 10px 18px 2px;
 }
 
 .social-modal-desc {
   color: var(--text3);
   font-size: 12px;
-  margin: 0;
+  margin: 0; line-height: 1.5;
 }
 
 .social-platforms {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  padding: 16px 20px 12px;
+  padding: 12px 18px 18px;
 }
 
 .platform-btn {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 7px;
-  padding: 14px 8px;
+  gap: 12px;
+  padding: 13px 14px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text2);
+  text-align: left;
   transition: all 0.18s;
+  position: relative;
+  overflow: hidden;
+}
+
+.platform-btn::before {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: var(--pc, #555);
+  opacity: 0;
+  transition: opacity 0.18s;
 }
 
 .platform-btn:hover {
-  transform: translateY(-3px);
-  border-color: #555;
-  color: var(--text);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  border-color: color-mix(in srgb, var(--pc, #555) 50%, transparent);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--pc, #000) 15%, transparent);
+  transform: translateY(-1px);
 }
+.platform-btn:hover::before { opacity: 1; }
 .platform-btn.loading { opacity: 0.4; pointer-events: none; }
 
 .platform-icon {
   width: 40px; height: 40px;
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.platform-text {
+  display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;
+}
+.platform-name {
+  font-size: 13px; font-weight: 700; color: var(--text); line-height: 1;
+}
+.platform-desc {
+  font-size: 10px; color: var(--text3); line-height: 1;
+}
+.platform-arrow {
+  font-size: 14px; color: var(--text3);
+  opacity: 0; transition: opacity 0.15s, transform 0.15s;
+  transform: translateX(-4px);
+}
+.platform-btn:hover .platform-arrow {
+  opacity: 1; transform: translateX(0);
 }
 
 .instagram-icon { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); color: #fff; }
@@ -1350,8 +1385,17 @@ html, body {
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
-  padding: 0 20px;
+  padding: 14px 18px 0;
 }
+
+.post-back-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 7px; color: var(--text2); cursor: pointer;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all var(--transition);
+}
+.post-back-btn:hover { background: var(--surface3); color: var(--text); }
 
 .post-platform-label {
   font-size: 13px;
@@ -1361,7 +1405,12 @@ html, body {
 }
 
 #socialPostResult {
-  padding: 0 20px 20px;
+  padding: 0 0 18px;
+}
+
+#socialPostResult .post-result-text {
+  margin: 0 18px;
+  width: calc(100% - 36px);
 }
 
 .post-result-text {

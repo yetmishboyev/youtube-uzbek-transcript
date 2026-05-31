@@ -921,6 +921,12 @@ document.getElementById('socialModalClose').addEventListener('click', () => {
   document.getElementById('socialPostModal').style.display = 'none';
 });
 
+document.getElementById('postBackBtn')?.addEventListener('click', () => {
+  document.getElementById('socialPostResult').style.display = 'none';
+  document.getElementById('socialPlatforms').style.display = 'grid';
+  document.getElementById('socialPostLoading').style.display = 'none';
+});
+
 document.getElementById('socialPostModal').addEventListener('click', e => {
   if (e.target === document.getElementById('socialPostModal'))
     document.getElementById('socialPostModal').style.display = 'none';
