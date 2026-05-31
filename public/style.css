@@ -149,7 +149,7 @@ html, body {
 .url-bar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 12px 20px;
+  padding: 10px 20px;
 }
 
 .url-bar-inner {
@@ -169,9 +169,9 @@ html, body {
 
 .input-icon {
   position: absolute;
-  left: 12px;
-  width: 16px;
-  height: 16px;
+  left: 14px;
+  width: 15px;
+  height: 15px;
   color: var(--text3);
   pointer-events: none;
   flex-shrink: 0;
@@ -181,8 +181,8 @@ html, body {
   width: 100%;
   background: var(--surface2);
   border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 36px 10px 38px;
+  border-radius: 10px;
+  padding: 10px 38px 10px 40px;
   color: var(--text);
   font-size: 14px;
   outline: none;
@@ -191,7 +191,7 @@ html, body {
 
 #urlInput:focus {
   border-color: var(--red);
-  box-shadow: 0 0 0 3px rgba(255,0,0,0.1);
+  box-shadow: 0 0 0 3px rgba(255,0,0,0.08);
 }
 
 #urlInput::placeholder { color: var(--text3); }
@@ -203,7 +203,7 @@ html, body {
   border: none;
   color: var(--text3);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   padding: 4px;
   border-radius: 4px;
   display: none;
@@ -214,37 +214,26 @@ html, body {
 .clear-btn.visible { display: flex; align-items: center; }
 
 .load-btn {
-  background: var(--red);
+  background: #ef4444;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   color: white;
   font-size: 14px;
-  font-weight: 600;
-  padding: 10px 20px;
+  font-weight: 700;
+  padding: 10px 22px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
   white-space: nowrap;
-  transition: background var(--transition), transform var(--transition);
+  transition: all 0.15s;
+  box-shadow: 0 2px 12px rgba(239,68,68,0.3);
 }
 
-.load-btn:hover { background: #cc0000; }
-.load-btn:active { transform: scale(0.98); }
-.load-btn.loading { background: #666; cursor: not-allowed; }
-.load-btn .btn-icon { font-size: 12px; }
-
-.url-hint {
-  max-width: 1600px;
-  margin: 6px auto 0;
-  font-size: 12px;
-  color: var(--text3);
-}
-
-.hint-url {
-  color: var(--text2);
-  font-family: 'Courier New', monospace;
-}
+.load-btn:hover { background: #dc2626; box-shadow: 0 4px 16px rgba(239,68,68,0.4); transform: translateY(-1px); }
+.load-btn:active { transform: scale(0.98); box-shadow: none; }
+.load-btn.loading { background: #555; cursor: not-allowed; box-shadow: none; transform: none; }
+.load-btn .btn-icon { font-size: 11px; }
 
 /* ============================================================
    Main Area
@@ -384,7 +373,7 @@ html, body {
 
 .time-display {
   font-size: 13px;
-  font-family: 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
   color: var(--text2);
   display: flex;
   align-items: center;
@@ -421,9 +410,11 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
   white-space: nowrap;
+  color: var(--text);
+  letter-spacing: -0.1px;
 }
 
 .segment-count {
@@ -629,7 +620,7 @@ html, body {
 .segment-time {
   font-size: 11px;
   color: var(--text3);
-  font-family: 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
   margin-bottom: 3px;
   display: flex;
   align-items: center;
