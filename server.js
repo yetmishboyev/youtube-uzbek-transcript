@@ -774,8 +774,11 @@ app.get('/api/transcript', async (req, res) => {
 
 /* ─── Video info ───────────────────────────────────────────────── */
 app.get('/api/video-info', async (req, res) => {
-  const { url } = req.query;
+  let { url } = req.query;
   if (!url) return res.status(400).json({ error: 'URL kerak' });
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url.trim())) {
+    url = `https://www.youtube.com/watch?v=${url.trim()}`;
+  }
   try {
     const r = await axios.get('https://noembed.com/embed', { params: { url }, timeout: 8000 });
     res.json(r.data);

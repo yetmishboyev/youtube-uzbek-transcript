@@ -682,8 +682,11 @@ function showApp(data) {
   if (data.isPremium) {
     upgradeBtn.textContent = '⚡ Premium faol';
     upgradeBtn.classList.add('premium-active');
+    upgradeBtn.onclick = () => alert('✅ Siz allaqachon Premium foydalanuvchisiz!');
+    upgradeBtn.removeEventListener('click', openUpgradeModal);
   } else {
     upgradeBtn.textContent = '⚡ Premium';
+    upgradeBtn.onclick = null;
   }
 
   document.getElementById('sharePostBtn').style.display = data.isPremium ? 'flex' : 'none';
