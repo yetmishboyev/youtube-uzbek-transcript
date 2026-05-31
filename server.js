@@ -55,7 +55,7 @@ async function sendOtpEmail(toEmail, code) {
   if (resendClient) {
     try {
       const { error } = await resendClient.emails.send({
-        from: 'Grgitton <onboarding@resend.dev>',
+        from: 'Grgitton <noreply@mail.promptai.uz>',
         to: toEmail,
         subject: `${code} — Grgitton kirish kodi`,
         html,
