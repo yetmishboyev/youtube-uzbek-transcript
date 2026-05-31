@@ -814,6 +814,21 @@ function hideLoginForm() {
   document.querySelector('.landing-tiers').style.display = 'flex';
 }
 
+document.getElementById('heroLoginBtn')?.addEventListener('click', () => {
+  showLoginForm("Bepul ro'yxatdan o'ting");
+});
+
+document.getElementById('heroTryBtn')?.addEventListener('click', () => {
+  document.getElementById('landingPage').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'block';
+  document.getElementById('headerGuest').style.display = 'flex';
+  document.getElementById('headerUser').style.display = 'none';
+  document.getElementById('sharePostBtn').style.display = 'none';
+  renderWelcomeScreen('guest');
+  loadUsage();
+  urlInput.focus();
+});
+
 document.getElementById('showLoginBtn')?.addEventListener('click', () => {
   showLoginForm("Bepul ro'yxatdan o'ting");
 });
