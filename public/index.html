@@ -342,33 +342,34 @@
 
   <!-- Upgrade Modal -->
   <div id="upgradeModal" class="modal-overlay" style="display:none">
-    <div class="modal">
+    <div class="modal upgrade-modal">
       <button class="modal-close" id="modalClose">✕</button>
 
       <!-- Default state -->
       <div id="upgradeDefault">
-        <div class="modal-icon">⚡</div>
-        <h2 class="modal-title">Premium boshlash</h2>
-        <div class="modal-price-block">
-          <span class="modal-price-big">$5</span>
-          <span class="modal-price-period">/oy</span>
+        <div class="upgrade-banner">
+          <div class="upgrade-badge">⚡ PREMIUM</div>
+          <div class="upgrade-price">$5<span class="upgrade-price-period">/oy</span></div>
+          <div class="upgrade-price-note">Hozir boshlash — istalgan vaqt bekor qilish</div>
         </div>
-        <ul class="modal-features">
-          <li>Kuniga <strong>50 ta video</strong> — 10× ko'proq</li>
-          <li>Grgitton AI — tabiiy, aniq tarjima</li>
-          <li>Kuniga <strong>20 ta AI post</strong> yaratish</li>
-          <li>Instagram, Telegram, LinkedIn, Facebook...</li>
-        </ul>
-        <button class="btn-request-upgrade" id="requestUpgradeBtn">⚡ Premium so'rov yuborish</button>
-        <p class="modal-note">So'rovingizni admin ko'rib chiqib, Premium tarifingizni yoqib beradi</p>
+        <div class="upgrade-body">
+          <div class="upgrade-feat"><span class="ufc">✓</span><span>Kuniga <strong>50 ta video</strong> — 10× ko'proq</span></div>
+          <div class="upgrade-feat"><span class="ufc">✓</span><span>Grgitton AI — tabiiy, aniq tarjima</span></div>
+          <div class="upgrade-feat"><span class="ufc">✓</span><span>Kuniga <strong>20 ta AI post</strong> yaratish</span></div>
+          <div class="upgrade-feat"><span class="ufc">✓</span><span>Instagram, Telegram, LinkedIn, Facebook...</span></div>
+          <button class="btn-request-upgrade" id="requestUpgradeBtn">⚡ Premium boshlash</button>
+          <p class="modal-note">Admin so'rovingizni ko'rib, Premium tarifingizni yoqadi</p>
+        </div>
       </div>
 
       <!-- Success state -->
       <div id="upgradeSuccess" style="display:none">
-        <div class="modal-icon">✅</div>
-        <h2 class="modal-title">So'rov yuborildi!</h2>
-        <p class="modal-desc">Admin tez orada Premium tarifingizni yoqadi. Sahifani yangilang va tekshiring.</p>
-        <button class="btn-email-login" id="upgradeSuccessClose" style="margin-top:16px;">Yaxshi, tushunarli</button>
+        <div class="upgrade-body upgrade-success-body">
+          <div class="upgrade-success-icon">✅</div>
+          <h2 class="modal-title">So'rov yuborildi!</h2>
+          <p class="modal-desc">Admin tez orada Premium tarifingizni yoqadi. Sahifani yangilang va tekshiring.</p>
+          <button class="btn-email-login" id="upgradeSuccessClose">Tushunarli</button>
+        </div>
       </div>
     </div>
   </div>
@@ -376,10 +377,18 @@
   <!-- Social Post Modal -->
   <div id="socialPostModal" class="modal-overlay" style="display:none">
     <div class="modal social-modal">
-      <button class="modal-close" id="socialModalClose">✕</button>
+      <div class="social-modal-topbar">
+        <div class="social-modal-topbar-left">
+          <div class="social-modal-topbar-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </div>
+          <span class="social-modal-topbar-title">AI Post Yaratish</span>
+        </div>
+        <button class="modal-close" id="socialModalClose" style="position:static">✕</button>
+      </div>
       <div class="social-modal-header">
-        <div class="social-modal-icon">✨</div>
-        <h2 class="modal-title">Ijtimoiy tarmoq posti</h2>
         <p class="social-modal-desc">Platforma tanlang — Grgitton sizga tayyor post yozib beradi</p>
       </div>
 
@@ -467,11 +476,24 @@
   <div id="historyModal" class="modal-overlay" style="display:none">
     <div class="modal history-modal">
       <div class="history-modal-header">
-        <h2 class="modal-title" style="margin:0">📋 Transkript tarixi</h2>
+        <div class="history-modal-header-left">
+          <div class="history-modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="history-modal-title">Transkript tarixi</h2>
+            <p class="history-modal-sub" id="historyModalSub">Yuklanmoqda...</p>
+          </div>
+        </div>
         <button class="modal-close" id="historyModalClose" style="position:static">✕</button>
       </div>
       <div id="historyList" class="history-list">
-        <div class="history-loading">Yuklanmoqda...</div>
+        <div class="history-loading">
+          <div class="history-loading-spinner"></div>
+          <span>Yuklanmoqda...</span>
+        </div>
       </div>
     </div>
   </div>

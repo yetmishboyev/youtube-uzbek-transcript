@@ -1058,25 +1058,31 @@ function relTimeShort(dateStr) {
 document.getElementById('historyBtn')?.addEventListener('click', async () => {
   document.getElementById('historyModal').style.display = 'flex';
   const list = document.getElementById('historyList');
-  list.innerHTML = '<div class="history-loading">Yuklanmoqda...</div>';
+  const sub = document.getElementById('historyModalSub');
+  list.innerHTML = '<div class="history-loading"><div class="history-loading-spinner"></div><span>Yuklanmoqda...</span></div>';
+  if (sub) sub.textContent = 'Yuklanmoqda...';
   const items = await loadHistory();
   if (!items.length) {
     list.innerHTML = '<div class="history-empty"><div class="history-empty-icon">📭</div>Hali transkript yo\'q</div>';
+    if (sub) sub.textContent = 'Bo\'sh';
     return;
   }
+  if (sub) sub.textContent = `Jami ${items.length} ta transkript`;
   list.innerHTML = items.map(item => `
     <div class="history-item" data-url="${escHtml(item.video_url)}" data-id="${escHtml(item.video_id)}">
       <div class="history-thumb">
         <img src="https://img.youtube.com/vi/${escHtml(item.video_id)}/default.jpg" alt="" loading="lazy"
-          onerror="this.parentElement.innerHTML='▶'" />
+          onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:18px;color:var(--text3)\'>▶</div>'" />
+        <div class="history-thumb-play">▶</div>
       </div>
       <div class="history-info">
         <div class="history-title">${escHtml(item.title || item.video_id)}</div>
-        <div class="history-meta">${item.segment_count ? item.segment_count + ' segment · ' : ''}${relTimeShort(item.created_at)}</div>
+        <div class="history-meta">
+          ${item.segment_count ? `<span>${item.segment_count} segment</span><span class="history-meta-dot">·</span>` : ''}
+          <span>${relTimeShort(item.created_at)}</span>
+        </div>
       </div>
-      <button class="history-reload" onclick="loadFromHistory('${escHtml(item.video_url || item.video_id)}')">
-        Yuklash ▶
-      </button>
+      <button class="history-load-btn" onclick="loadFromHistory('${escHtml(item.video_url || item.video_id)}')">Yuklash</button>
     </div>
   `).join('');
 });
