@@ -32,9 +32,12 @@ const resendClient = process.env.RESEND_API_KEY
 const mailer = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
   ? nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
+      port: 465,
+      secure: true,
       family: 4,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
       auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
     })
   : null;
