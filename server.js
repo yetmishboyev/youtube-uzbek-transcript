@@ -16,8 +16,8 @@ const pgSession = require('connect-pg-simple')(session);
 const app = express();
 const PORT = process.env.PORT || 3000;
 const WHISPER_SCRIPT = path.join(__dirname, 'whisper_transcribe.py');
-const YTDLP_BIN   = '/Library/Frameworks/Python.framework/Versions/3.10/bin/yt-dlp';
-const PYTHON_BIN  = '/Library/Frameworks/Python.framework/Versions/3.10/bin/python3';
+const YTDLP_BIN   = process.env.YTDLP_BIN  || 'yt-dlp';
+const PYTHON_BIN  = process.env.PYTHON_BIN || 'python3';
 
 // Anthropic client
 const anthropic = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your_api_key_here'
@@ -60,11 +60,10 @@ async function sendOtpEmail(toEmail, code) {
         subject: `${code} — Grgitton kirish kodi`,
         html,
       });
-      if (error) { console.error('Resend xato:', error.message); return false; }
-      return true;
+      if (!error) return true;
+      console.error('Resend xato:', error.message);
     } catch (err) {
       console.error('Resend xato:', err.message);
-      return false;
     }
   }
 
@@ -117,7 +116,7 @@ app.use(loadUser);
 /* ─── Auth routes ──────────────────────────────────────────────── */
 
 // Step 1: Email jo'natish — OTP bor bo'lsa email ga, yo'q bo'lsa to'g'ri login
-app.post('/auth/send-otp', async (req, res) => {
+async function handleSendOtp(req, res) {
   const email = (req.body.email || '').trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email))
     return res.status(400).json({ error: "To'g'ri email kiriting" });
@@ -144,10 +143,12 @@ app.post('/auth/send-otp', async (req, res) => {
       [email, code, expires]
     );
     const sent = await sendOtpEmail(email, code);
-    if (!sent) return res.status(500).json({ error: "Email yuborishda xato. Gmail sozlamalarini tekshiring." });
+    if (!sent) return res.status(500).json({ error: "Email yuborishda xato. Resend yoki Gmail sozlamalarini tekshiring." });
     res.json({ ok: true, skipOtp: false });
   } catch { res.status(500).json({ error: 'Server xato' }); }
-});
+}
+
+app.post('/auth/send-otp', handleSendOtp);
 
 // Step 2: OTP tekshirish
 app.post('/auth/verify-otp', async (req, res) => {
@@ -175,11 +176,7 @@ app.post('/auth/verify-otp', async (req, res) => {
   } catch { res.status(500).json({ error: 'Server xato' }); }
 });
 
-// Eski endpoint — orqaga mos
-app.post('/auth/email', async (req, res) => {
-  req.url = '/auth/send-otp';
-  app._router.handle(req, res);
-});
+app.post('/auth/email', handleSendOtp); // Eski endpoint — orqaga mos
 
 app.post('/auth/logout', (req, res) => {
   req.session.destroy(err => {
@@ -326,7 +323,7 @@ app.get('/admin/api/users', requireAdmin, async (req, res) => {
 
     params.push(limit, offset);
     const { rows } = await pool.query(
-      `SELECT id, email, name, is_premium, created_at, last_seen, total_videos
+      `SELECT id, email, name, is_premium, created_at, last_seen, COALESCE(total_videos, 0) AS total_videos
        FROM users ${whereClause}
        ORDER BY ${orderClause}
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -891,7 +888,7 @@ Talablar:
     ].filter(Boolean).join('\n');
 
     const message = await anthropic.messages.create({
-      model: 'claude-opus-4-5',
+      model: 'claude-opus-4-8',
       max_tokens: 1500,
       messages: [{
         role: 'user',
@@ -1054,7 +1051,17 @@ app.listen(PORT, async () => {
       )
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_transcripts_user ON transcripts(user_id, created_at DESC)`);
-    await pool.query(`-- otp cleanup: eski kodlarni o'chirish (startup da bir marta) -- SELECT 1`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_log (
+        id              SERIAL PRIMARY KEY,
+        admin_action    VARCHAR(100),
+        target_user_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        target_email    VARCHAR(255),
+        details         TEXT,
+        created_at      TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS total_videos INTEGER DEFAULT 0`);
     pool.query(`DELETE FROM otp_codes WHERE expires_at < NOW() - INTERVAL '1 day'`).catch(() => {});
     console.log(`🗄️  PostgreSQL: ulandi\n`);
   } catch (e) {
