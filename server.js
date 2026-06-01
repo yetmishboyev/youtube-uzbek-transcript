@@ -92,6 +92,7 @@ async function sendOtpEmail(toEmail, code) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 /* ─── Session ──────────────────────────────────────────────────── */
+app.set('trust proxy', 1); // Railway reverse proxy orqasida HTTPS ni tan olish
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'fallback-secret') {
   console.warn('⚠️  SESSION_SECRET .env da o\'rnatilmagan — ishlab chiqarish uchun majburiy!');
 }
