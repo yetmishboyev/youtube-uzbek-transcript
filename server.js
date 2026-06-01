@@ -134,7 +134,10 @@ async function handleSendOtp(req, res) {
         [email, name]
       );
       req.session.userId = rows[0].id;
-      return res.json({ ok: true, skipOtp: true });
+      return req.session.save(err => {
+        if (err) return res.status(500).json({ error: 'Session xato' });
+        res.json({ ok: true, skipOtp: true });
+      });
     } catch { return res.status(500).json({ error: 'Server xato' }); }
   }
 
@@ -175,7 +178,10 @@ app.post('/auth/verify-otp', async (req, res) => {
       [email, name]
     );
     req.session.userId = userRows[0].id;
-    res.json({ ok: true });
+    req.session.save(err => {
+      if (err) return res.status(500).json({ error: 'Session xato' });
+      res.json({ ok: true });
+    });
   } catch { res.status(500).json({ error: 'Server xato' }); }
 });
 
